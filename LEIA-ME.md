@@ -1,33 +1,33 @@
 # Agenda esportiva do dia
 
-Todo dia às 8h busca os jogos (futebol, basquete, vôlei e NFL) em futnatv.net, gera as imagens da agenda e avisa com uma notificação no Mac. A pasta do dia abre sozinha no Finder.
+Todo dia às 8h (Brasília) o GitHub Actions busca os jogos (futebol, basquete, vôlei e NFL) em futnatv.net, gera as imagens da agenda e publica numa **release do dia**. Não precisa do Mac ligado.
 
-## Onde ficam as imagens
+## Onde pegar as imagens
 
-`imagens/AAAA-MM-DD/`, por exemplo `imagens/2026-10-28/`:
-- `jogos-2026-10-28-1.png`, `-2.png`...: a agenda em imagem (divide quando tem muitos jogos).
-- `mensagem.txt`: a mesma agenda em texto, pra colar se preferir.
+https://github.com/o-bom-redator/agenda-esportiva/releases
 
-## Comandos
+Cada dia tem uma release "Agenda DD/MM" com:
+- `jogos-AAAA-MM-DD-1.png`, `-2.png`...: a agenda em imagem (divide quando tem muitos jogos).
+- `mensagem.txt`: a mesma agenda em texto.
 
-- `node gerar.js`: gera agora os jogos de hoje.
-- `node gerar.js --data amanha` ou `node gerar.js --data 2026-10-28`: outro dia.
-- `./agendar.sh`: liga (ou atualiza) o agendamento das 8h.
-- `./agendar.sh remover`: desliga o agendamento.
-- `agenda.log`: histórico de cada execução.
-- Mudou a pasta de lugar? Rode `./agendar.sh` de novo.
+As releases com mais de 10 dias são apagadas sozinhas. O GitHub avisa por e-mail e no app quando sai uma release nova (se não chegar, em **Watch → Custom → Releases** no repositório).
+
+## Gerar fora do horário
+
+- No GitHub: **Actions → Agenda do dia → Run workflow** e escolha `hoje`, `amanha` ou uma data (`2026-10-28`).
+- No Mac: `node gerar.js --data amanha`. Salva em `imagens/AAAA-MM-DD/` e abre a pasta.
 
 ## Opções (`config.json`)
+
+Depois de alterar, faça commit e push pro GitHub usar a versão nova.
 
 - `esportes`: quais esportes entram: `futebol`, `basquete`, `volei`, `nfl`.
 - `ocultarBase`: `true` tira jogos sub-17, sub-20, U21, juniores etc.
 - `ocultarFemininos`: `true` tira jogos femininos.
 - `ocultarCampeonatos`: ex. `["MLS", "Campeonato Saudita"]`.
 - `jogosPorImagem`: acima disso, divide em mais de uma imagem (padrão 22).
-- `abrirPasta`: `false` pra não abrir o Finder, só notificar.
 
-## Observações
+## Outras opções guardadas
 
-- O Mac precisa estar ligado. Se estiver em repouso às 8h, gera quando acordar.
-  Pra ele acordar sozinho: `sudo pmset repeat wakeorpoweron MTWRFSU 07:58:00`.
-- Envio automático pelo WhatsApp (opcional, desligado): `enviar.js`. Veja os comentários no topo do arquivo.
+- `./agendar.sh`: agenda a geração no próprio Mac às 8h (desligado; o GitHub faz isso agora).
+- `enviar.js`: envio automático pro grupo do WhatsApp (desligado). Veja os comentários no topo do arquivo.
