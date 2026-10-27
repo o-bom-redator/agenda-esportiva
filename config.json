@@ -1,0 +1,15 @@
+{
+  "grupo": "NOME EXATO DO GRUPO AQUI",
+  "formato": "imagem",
+  "esportes": [
+    "futebol",
+    "basquete",
+    "volei",
+    "nfl"
+  ],
+  "jogosPorImagem": 22,
+  "ocultarBase": true,
+  "ocultarFemininos": false,
+  "ocultarCampeonatos": [],
+  "abrirPasta": true
+}

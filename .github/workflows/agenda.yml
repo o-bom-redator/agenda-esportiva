@@ -1,0 +1,81 @@
+# Todo dia às 8h (Brasília) gera as imagens da agenda e publica numa release do dia.
+# A release aparece em github.com/<usuario>/<repo>/releases e o GitHub avisa por e-mail/app.
+name: Agenda do dia
+
+on:
+  schedule:
+    - cron: '0 11 * * *' # 11h UTC = 8h em Brasília (o GitHub pode atrasar alguns minutos)
+  workflow_dispatch:
+    inputs:
+      data:
+        description: 'Dia: hoje, amanha ou AAAA-MM-DD'
+        default: hoje
+
+permissions:
+  contents: write
+
+jobs:
+  agenda:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Fontes (emojis)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq fonts-noto-color-emoji
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Definir data
+        run: |
+          ENTRADA="${{ github.event.inputs.data || 'hoje' }}"
+          case "$ENTRADA" in
+            hoje) DATA=$(TZ=America/Sao_Paulo date +%F) ;;
+            amanha) DATA=$(TZ=America/Sao_Paulo date -d tomorrow +%F) ;;
+            *) DATA="$ENTRADA" ;;
+          esac
+          echo "DATA=$DATA" >> "$GITHUB_ENV"
+
+      - name: Gerar imagens
+        run: node gerar.js --data "$DATA"
+
+      - name: Publicar release do dia
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="agenda-$DATA"
+          PASTA="imagens/$DATA"
+          gh release delete "$TAG" --cleanup-tag -y 2>/dev/null || true
+
+          {
+            echo "### $(head -2 "$PASTA/mensagem.txt" | tail -1 | tr -d '_📅 ')"
+            echo
+            for f in "$PASTA"/*.png; do
+              echo "![$(basename "$f")](https://github.com/${{ github.repository }}/releases/download/$TAG/$(basename "$f"))"
+            done
+            echo
+            echo "<details><summary>Versão em texto</summary>"
+            echo
+            echo '```'
+            cat "$PASTA/mensagem.txt"
+            echo '```'
+            echo "</details>"
+          } > notas.md
+
+          gh release create "$TAG" "$PASTA"/*.png "$PASTA/mensagem.txt" \
+            --title "Agenda $(TZ=UTC date -d "$DATA" +%d/%m)" --notes-file notas.md --latest
+
+      - name: Apagar releases com mais de 10 dias
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          LIMITE=$(TZ=America/Sao_Paulo date -d '10 days ago' +%F)
+          gh release list --limit 100 --json tagName --jq '.[].tagName' | grep '^agenda-' | while read -r TAG; do
+            [[ "${TAG#agenda-}" < "$LIMITE" ]] && gh release delete "$TAG" --cleanup-tag -y || true
+          done

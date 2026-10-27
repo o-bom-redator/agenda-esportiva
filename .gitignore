@@ -1,0 +1,7 @@
+node_modules/
+.sessao-whatsapp/
+.wwebjs_cache/
+previa/
+imagens/
+*.log
+.DS_Store
