@@ -10,10 +10,10 @@ const rodar = promisify(execFile);
 const LIMITE = 50 * 1024 * 1024; // 50 MB
 
 // Acha o endereço do .mp4 dentro da página do vídeo.
-export async function acharVideo(link) {
+// streama.in e streamain.com mostram o vídeo numa página "embed" separada: segue até ela.
+export async function acharVideo(link, tentativas = 2) {
   if (/\.(mp4|webm|mov)(\?|$)/i.test(link)) return link;
-  // streamain.com/en/ID/watch → a página "embed" é a que tem o vídeo
-  const sa = link.match(/streamain\.com\/(?:\w{2}\/)?([A-Za-z0-9]+)\/watch/);
+  const sa = link.match(/streama(?:in\.com|\.in)\/(?:\w{2}\/)?([A-Za-z0-9]+)\/watch/);
   const pagina = sa ? `https://streamain.com/embed/${sa[1]}` : link;
 
   const res = await fetch(pagina, { redirect: 'follow' });
@@ -24,8 +24,10 @@ export async function acharVideo(link) {
     html.match(/<video[^>]+data-link=['"]([^'"]+)['"]/i)?.[1] ||
     html.match(/<source[^>]+src=['"]([^'"]+)['"]/i)?.[1] ||
     html.match(/<video[^>]+src=['"]([^'"]+)['"]/i)?.[1];
-  if (!achado) throw new Error('não achei o vídeo nessa página');
-  return new URL(achado.replace(/&amp;/g, '&'), res.url).href;
+  if (achado) return new URL(achado.replace(/&amp;/g, '&'), res.url).href;
+  const embed = html.match(/["'](\/embed\/[A-Za-z0-9]+)["']/)?.[1];
+  if (embed && tentativas > 1) return acharVideo(new URL(embed, res.url).href, tentativas - 1);
+  throw new Error('não achei o vídeo nessa página');
 }
 
 // Gera, numa pasta temporária:

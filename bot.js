@@ -73,9 +73,12 @@ Também te aviso ${config.avisos?.minutosAntes ?? 15} minutos antes dos jogos pr
 // Vídeo que chegou sem título: espera a próxima mensagem com o título.
 let pendente = null;
 
+// Links com ou sem "https://" (ex.: streamin.link/v/a413db94)
+const LINK = /(?:https?:\/\/)?(?:[\w-]+\.)+[a-z]{2,}\/\S+/gi;
+
 async function processar(chat, texto) {
-  const links = texto.match(/https?:\/\/\S+/g) || [];
-  const titulo = texto.replace(/https?:\/\/\S+/g, '').split('\n').map((l) => l.trim()).filter(Boolean).join(' ');
+  const links = (texto.match(LINK) || []).map((l) => (/^https?:/i.test(l) ? l : `https://${l}`));
+  const titulo = texto.replace(LINK, '').split('\n').map((l) => l.trim()).filter(Boolean).join(' ');
 
   if (!links.length) {
     if (pendente && titulo) return entregar(chat, titulo, pendente);
