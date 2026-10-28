@@ -22,10 +22,12 @@ export function lerTitulo(titulo) {
   const m = titulo.replace(/\s+/g, ' ').trim().match(TITULO);
   if (!m) return null;
   const [, mandante, p1, p2, visitante, resto] = m;
-  const minutos = [...resto.matchAll(/(\d+(?:\s*\+\s*\d+)?)\s*'/g)];
-  const minuto = minutos.length ? `${minutos.at(-1)[1].replace(/\s/g, '')}'` : '';
+  // 86' | 45+2' | 90'+4'
+  const MINUTO = /(\d+)'?(?:\s*\+\s*(\d+))?\s*'/g;
+  const ultimo = [...resto.matchAll(MINUTO)].at(-1);
+  const minuto = ultimo ? `${ultimo[1]}${ultimo[2] ? `+${ultimo[2]}` : ''}'` : '';
   const lances = LANCES.filter(([re]) => re.test(resto)).map(([, nome]) => nome);
-  let autor = resto.replace(/\d+(?:\s*\+\s*\d+)?\s*'/g, '');
+  let autor = resto.replace(MINUTO, '');
   for (const [re] of LANCES) autor = autor.replace(re, '');
   autor = autor.replace(/[()[\],]/g, ' ').replace(/\s+/g, ' ').trim();
   return {
