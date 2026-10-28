@@ -1,6 +1,6 @@
 import puppeteer from 'puppeteer';
 import { ESPORTES } from './scraper.js';
-import { formatarData, ehHoje } from './mensagem.js';
+import { formatarData, ehHoje, rotuloDia } from './mensagem.js';
 
 export const CORES = { futebol: '#16a34a', basquete: '#ea580c', volei: '#d4a106', nfl: '#2563eb' };
 
@@ -41,14 +41,16 @@ export function chips(transmissao) {
   return canais.map((c) => `<span class="chip ${tipoCanal(c)}">${esc(c)}</span>`).join('');
 }
 
-function linhas(jogos) {
+function linhas(jogos, data) {
   let ultimo = '';
   return jogos.map((j) => {
-    const repetido = j.horario === ultimo;
-    ultimo = j.horario;
+    const chave = `${j.data} ${j.horario}`;
+    const repetido = chave === ultimo;
+    ultimo = chave;
+    const dia = rotuloDia(j, data); // jogo da madrugada seguinte
     return `
     <div class="row${repetido ? '' : ' novo-horario'}" style="--cor:${CORES[j.esporte]}">
-      <div class="hora${repetido ? ' repetida' : ''}">${esc(j.horario)}</div>
+      <div class="hora${repetido ? ' repetida' : ''}">${esc(j.horario)}${dia ? `<div class="dia">${esc(dia)}</div>` : ''}</div>
       <div class="camp">
         <div class="camp-nome"><span class="ico">${ESPORTES[j.esporte].icone}</span>${esc(j.campeonato)}</div>
         ${j.rodada ? `<div class="rodada">${esc(j.rodada)}</div>` : ''}
@@ -82,6 +84,7 @@ function html(jogos, data, pagina, totalPaginas, totalJogos, esportesPresentes) 
   .row.novo-horario:not(:first-child) { margin-top: 12px; }
   .hora { font-size: 26px; font-weight: 900; color: #0b1f3a; font-variant-numeric: tabular-nums; }
   .hora.repetida { color: #c3cad5; }
+  .dia { font-size: 12px; font-weight: 800; color: #fff; background: #13315c; border-radius: 6px; padding: 2px 6px; margin-top: 3px; display: inline-block; letter-spacing: .3px; }
   .camp-nome { font-size: 16px; font-weight: 700; color: #1f2937; display: flex; align-items: center; gap: 8px; line-height: 1.2; }
   .ico { font-size: 18px; }
   .rodada { font-size: 13px; color: #8a94a6; margin: 3px 0 0 28px; }
@@ -100,7 +103,7 @@ function html(jogos, data, pagina, totalPaginas, totalJogos, esportesPresentes) 
     <div class="sub"><div class="data">📅 ${esc(formatarData(data, { weekday: 'long', day: 'numeric', month: 'long' }))} · ${totalJogos} jogos</div><div class="legenda">${legenda}</div></div>
   </header>
   <div class="cols"><div>Hora</div><div>Campeonato</div><div>Jogo</div><div style="text-align:right">Onde assistir</div></div>
-  <div class="lista">${linhas(jogos)}</div>
+  <div class="lista">${linhas(jogos, data)}</div>
   <footer><span>Horários de Brasília · Fonte: futnatv.net</span><span>${totalPaginas > 1 ? `Parte ${pagina} de ${totalPaginas}` : ''}</span></footer>
   </div></body></html>`;
 }

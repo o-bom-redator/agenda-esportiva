@@ -22,6 +22,12 @@ export function formatarData(data, opcoes = { weekday: 'long', day: '2-digit', m
   return d.charAt(0).toUpperCase() + d.slice(1);
 }
 
+// Jogo da madrugada seguinte: "qui, 29/10". Jogo do próprio dia: ''.
+export function rotuloDia(jogo, data) {
+  if (jogo.data === data) return '';
+  return formatarData(jogo.data, { weekday: 'short', day: '2-digit', month: '2-digit' }).replace('.', '').toLowerCase();
+}
+
 // "hoje" quando a data é a de hoje; senão "do dia"
 export const ehHoje = (data) => data === new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
 
@@ -32,7 +38,8 @@ export function montarMensagem(jogos, data) {
 
   const blocos = jogos.map((j) => {
     const camp = j.rodada ? `${j.campeonato} · ${j.rodada}` : j.campeonato;
-    return `${ESPORTES[j.esporte].icone} *${j.horario}* | ${j.mandante} x ${j.visitante}\n🏆 ${camp}\n📺 ${j.transmissao || 'A definir'}`;
+    const dia = rotuloDia(j, data);
+    return `${ESPORTES[j.esporte].icone} *${j.horario}*${dia ? ` _(madrugada, ${dia})_` : ''} | ${j.mandante} x ${j.visitante}\n🏆 ${camp}\n📺 ${j.transmissao || 'A definir'}`;
   });
 
   return `${cabecalho}\n\n${blocos.join('\n\n')}\n\n_Fonte: futnatv.net_`;

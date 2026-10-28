@@ -1,19 +1,18 @@
 // Página da agenda (site/index.html): cada jogo tem um botão "Salvar no Google Agenda".
 // Também gera site/agenda.ics com todos os jogos (pra iPhone/Outlook).
 import { ESPORTES } from './scraper.js';
-import { formatarData, ehHoje } from './mensagem.js';
+import { formatarData, ehHoje, rotuloDia } from './mensagem.js';
 import { CORES, esc, chips, separarCanais } from './imagem.js';
 
 // Duração estimada de cada esporte, em minutos (só pra bloquear o horário na agenda)
 const DURACAO = { futebol: 120, basquete: 150, volei: 120, nfl: 210 };
 
-// Início e fim do jogo como "AAAAMMDDTHHMMSS" (hora de Brasília, sem fuso).
-// Jogos de madrugada (antes das 6h) são do dia seguinte.
-function horarios(jogo, data) {
+// Início e fim do jogo como "AAAAMMDDTHHMMSS" (hora de Brasília, sem fuso),
+// no dia real do jogo (os da madrugada já vêm com a data do dia seguinte).
+function horarios(jogo) {
   const [h, m] = jogo.horario.split('h').map(Number);
-  const inicio = new Date(`${data}T00:00:00Z`);
+  const inicio = new Date(`${jogo.data}T00:00:00Z`);
   inicio.setUTCHours(h, m || 0);
-  if (h < 6) inicio.setUTCDate(inicio.getUTCDate() + 1);
   const fim = new Date(inicio.getTime() + DURACAO[jogo.esporte] * 60_000);
   const fmt = (d) => d.toISOString().replace(/[-:]/g, '').slice(0, 15);
   return [fmt(inicio), fmt(fim)];
@@ -24,7 +23,7 @@ const detalhes = (j) =>
   `${j.campeonato}${j.rodada ? ` · ${j.rodada}` : ''}\nOnde assistir: ${separarCanais(j.transmissao).join(', ')}\n\nAgenda do dia: futnatv.net`;
 
 export function linkGoogleAgenda(jogo, data) {
-  const [inicio, fim] = horarios(jogo, data);
+  const [inicio, fim] = horarios(jogo);
   const p = new URLSearchParams({
     action: 'TEMPLATE',
     text: titulo(jogo),
@@ -39,7 +38,7 @@ export function linkGoogleAgenda(jogo, data) {
 export function gerarIcs(jogos, data) {
   const linha = (s) => s.replace(/[\\;,]/g, (c) => `\\${c}`).replace(/\n/g, '\\n');
   const eventos = jogos.map((j, i) => {
-    const [inicio, fim] = horarios(j, data);
+    const [inicio, fim] = horarios(j);
     return [
       'BEGIN:VEVENT',
       `UID:${data}-${i}@agenda-esportiva`,
@@ -67,9 +66,11 @@ export function gerarPagina(jogos, data) {
 
   let ultimo = '';
   const cards = jogos.map((j) => {
-    const novo = j.horario !== ultimo;
-    ultimo = j.horario;
-    return `${novo ? `<h2 class="hora">${esc(j.horario)}</h2>` : ''}
+    const chave = `${j.data} ${j.horario}`;
+    const novo = chave !== ultimo;
+    ultimo = chave;
+    const dia = rotuloDia(j, data); // jogo da madrugada seguinte
+    return `${novo ? `<h2 class="hora">${esc(j.horario)}${dia ? ` <span>madrugada · ${esc(dia)}</span>` : ''}</h2>` : ''}
     <article class="jogo" data-esporte="${j.esporte}" style="--cor:${CORES[j.esporte]}">
       <div class="camp">${ESPORTES[j.esporte].icone} ${esc(j.campeonato)}${j.rodada ? ` <span>· ${esc(j.rodada)}</span>` : ''}</div>
       <div class="times">${esc(j.mandante)} <b>×</b> ${esc(j.visitante)}</div>
@@ -111,6 +112,7 @@ export function gerarPagina(jogos, data) {
     padding: 7px 14px; border-radius: 999px; cursor: pointer; white-space: nowrap; }
   .filtros button.ativo { background: #13315c; color: #fff; border-color: #13315c; }
   main { padding: 4px 16px 32px; }
+  .hora span { font-size: 13px; font-weight: 800; color: #fff; background: #13315c; border-radius: 6px; padding: 3px 8px; vertical-align: middle; margin-left: 6px; }
   .hora { font-size: 20px; font-weight: 900; margin: 20px 0 8px; font-variant-numeric: tabular-nums; }
   .jogo { background: var(--card); border-radius: 14px; border-left: 5px solid var(--cor); padding: 12px 14px; margin-bottom: 8px;
     box-shadow: 0 1px 2px rgba(16,24,40,.06); }

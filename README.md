@@ -34,7 +34,7 @@ O GitHub avisa por e-mail e no app quando sai a release nova. Se o aviso não ch
 
 - **Esportes:** jogos com transmissão confirmada de futebol, basquete (NBA, NBB, EuroLiga...), vôlei e NFL.
 - **Público:** profissional masculino e feminino. Categorias de base (sub-17, sub-20, U21, juniores, youth...) ficam de fora.
-- **Ordem:** por horário. Jogos de madrugada (ex.: NBA 00h00) vão pro fim do dia.
+- **Ordem:** por horário. A agenda de um dia vai das 6h até a madrugada seguinte, como numa grade de TV. Os jogos da madrugada (ex.: NBA 00h00) ficam no fim, marcados com a data real (ex.: "qui, 29/10"), e entram no Google Agenda nesse dia.
 - **Imagens:** quando há muitos jogos, a agenda é dividida em várias imagens ("Parte 1 de 3").
 - **Cores dos canais:**
   - 🔴 YouTube/CazéTV (grátis)
