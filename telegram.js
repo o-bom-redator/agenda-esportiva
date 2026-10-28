@@ -41,6 +41,4 @@ export async function enviarAgenda(imagens, data, totalJogos, pagina) {
     grupo.forEach((img, n) => form.append(`img${n}`, new Blob([img], { type: 'image/png' }), `jogos-${data}-${i + n + 1}.png`));
     await chamar('sendMediaGroup', form);
   }
-  // legenda também em texto solto, fácil de copiar pro WhatsApp
-  await chamar('sendMessage', new URLSearchParams({ chat_id: chat, text: legenda, disable_web_page_preview: 'true' }));
 }

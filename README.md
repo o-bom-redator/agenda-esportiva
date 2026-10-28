@@ -111,10 +111,10 @@ Pra mudar os horários, edite o `cron` e o `PARAR_AS` no `.github/workflows/bot.
 
 ### Avisos de início de jogo
 
-O mesmo bot te avisa **15 minutos antes** dos jogos principais, com o link de onde assistir, pra você colar no canal:
+O mesmo bot te avisa **30 minutos antes** dos jogos principais, com o link de onde assistir, pra você colar no canal:
 
 ```
-⏰ Daqui a 15 minutos, às 19h30, começa *Fluminense x Internacional* pelo Brasileirão - Série A.
+⏰ Daqui a 30 minutos, às 19h30, começa *Fluminense x Internacional* pelo Brasileirão - Série A.
 📺 Transmissão: Record, Premiere e CazéTV
 
 👉 Record: https://recordplus.com
@@ -122,10 +122,11 @@ O mesmo bot te avisa **15 minutos antes** dos jogos principais, com o link de on
 👉 CazéTV: https://www.youtube.com/results?search_query=CazéTV+Fluminense+x+Internacional+ao+vivo
 ```
 
+- **Bola rolando:** na hora marcada, chega um segundo aviso, "🟢 A bola rola para:", com os jogos daquele horário e os links. Pra desligar, use `avisos.noInicio: false`.
 - **Agrupados:** jogos que começam no mesmo horário saem numa mensagem só.
 - **Links:** levam pro site do canal (Disney+, Globoplay, HBO Max...). Quem tem conta já cai no ao vivo. Pros canais do YouTube, o link é uma busca pelo canal + jogo, que traz a live no topo. Os links ficam em `canais.js`, e dá pra trocá-los por links de afiliado no futuro.
 - **Quais jogos:** só os campeonatos listados em `avisos.campeonatos` no `config.json`. O nome precisa ser igual ao do futnatv (ex.: `Brasileirão - Série A`, `Campeonato Italiano`, `NBA`). Com a lista vazia, avisa todos.
-- **Antecedência:** `avisos.minutosAntes` (padrão 15).
+- **Antecedência:** `avisos.minutosAntes` (hoje 30).
 - **Próximos avisos:** mande `/avisos` pro bot.
 - **Sem perder aviso:** o bot relê a agenda a cada 2 horas, então pega mudanças de horário. Na troca de turno, ele lembra quais jogos já avisou. Se um turno começar atrasado, ainda avisa os jogos que não começaram, com os minutos que faltam.
 
@@ -163,7 +164,8 @@ As imagens ficam em `imagens/AAAA-MM-DD/` e a página em `site/`. No Mac, aparec
 | `jogosPorImagem` | Acima disso, divide em mais imagens (padrão 22) |
 | `pagina` | Link da página da agenda, usado na legenda do Telegram |
 | `abrirPasta` | No Mac, abre a pasta das imagens ao terminar (padrão `true`) |
-| `avisos.minutosAntes` | Quantos minutos antes do jogo o bot avisa (padrão 15) |
+| `avisos.minutosAntes` | Quantos minutos antes do jogo o bot avisa (hoje 30) |
+| `avisos.noInicio` | `true` também avisa na hora do jogo ("A bola rola para:") |
 | `avisos.campeonatos` | Campeonatos que geram aviso, com o nome igual ao do futnatv. Vazio = todos |
 | `gols.automatico` | `true` manda os gols sozinho (goals.zone). `false` deixa só o modo manual |
 | `gols.campeonatos` | Opcional: campeonatos dos gols automáticos. Sem ela, usa a lista dos avisos |

@@ -45,11 +45,18 @@ export function montarAviso(jogos, minutos) {
     const t = transmissao(j);
     return `⏰ ${quando}, começa *${j.mandante} x ${j.visitante}* ${pelo(j.campeonato)} ${j.campeonato}.\n📺 Transmissão: ${t.texto}${t.links ? `\n\n${t.links}` : ''}`;
   }
-  const blocos = jogos.map((j) => {
-    const t = transmissao(j);
-    return `${ESPORTES[j.esporte].icone} *${j.mandante} x ${j.visitante}*\n🏆 ${j.campeonato}\n${t.links || `📺 ${t.texto}`}`;
-  });
-  return `⏰ *${quando}, começam:*\n\n${blocos.join('\n\n')}`;
+  return `⏰ *${quando}, começam:*\n\n${jogos.map(bloco).join('\n\n')}`;
+}
+
+// Um jogo na lista: times, campeonato e onde assistir
+function bloco(j) {
+  const t = transmissao(j);
+  return `${ESPORTES[j.esporte].icone} *${j.mandante} x ${j.visitante}*\n🏆 ${j.campeonato}\n${t.links || `📺 ${t.texto}`}`;
+}
+
+// Na hora do jogo: "A bola rola para:" + os jogos do horário
+export function montarBolaRolando(jogos) {
+  return `🟢 *A bola rola para:* (${jogos[0].horario})\n\n${jogos.map(bloco).join('\n\n')}`;
 }
 
 // Jogos já avisados ficam guardados em `arquivo` (se informado), pra não repetir o aviso
@@ -66,7 +73,7 @@ function salvarAvisados(arquivo, avisados) {
 
 // Liga os avisos. `enviar(texto)` é quem manda a mensagem (no bot, pro seu Telegram).
 export function iniciarAvisos(config, enviar, log = console.log, arquivo = '') {
-  const { minutosAntes = 15, campeonatos = [] } = config.avisos || {};
+  const { minutosAntes = 15, campeonatos = [], noInicio = true } = config.avisos || {};
   const avisados = arquivo ? lerAvisados(arquivo) : new Set();
   let jogos = [];
   let lidoEm = 0;
@@ -99,14 +106,25 @@ export function iniciarAvisos(config, enviar, log = console.log, arquivo = '') {
       const falta = inicio(j) - agora;
       return falta >= MINIMO && falta <= minutosAntes * 60_000 && !avisados.has(`${j.data} ${j.horario} ${j.mandante}`);
     });
-    // um aviso por horário
-    const porHorario = Map.groupBy(prontos, (j) => `${j.data} ${j.horario}`);
-    for (const grupo of porHorario.values()) {
-      const minutos = Math.round((inicio(grupo[0]) - agora) / 60_000);
-      grupo.forEach((j) => avisados.add(`${j.data} ${j.horario} ${j.mandante}`));
+    await avisar(prontos, '', (grupo) => montarAviso(grupo, Math.round((inicio(grupo[0]) - agora) / 60_000)));
+
+    // Na hora marcada (até 5 min depois, se o bot estava reiniciando): "A bola rola para:"
+    if (noInicio) {
+      const rolando = jogos.filter((j) => {
+        const falta = inicio(j) - agora;
+        return falta <= 0 && falta > -5 * 60_000 && !avisados.has(`${j.data} ${j.horario} ${j.mandante} #rola`);
+      });
+      await avisar(rolando, ' #rola', montarBolaRolando);
+    }
+  }
+
+  // Um aviso por horário; marca os jogos como avisados (sufixo diferencia os dois tipos)
+  async function avisar(lista, sufixo, montar) {
+    for (const grupo of Map.groupBy(lista, (j) => `${j.data} ${j.horario}`).values()) {
+      grupo.forEach((j) => avisados.add(`${j.data} ${j.horario} ${j.mandante}${sufixo}`));
       if (arquivo) salvarAvisados(arquivo, avisados);
-      await enviar(montarAviso(grupo, minutos)).catch((e) => log('Avisos: falha ao enviar:', e.message));
-      log(`Aviso enviado: ${grupo.map((j) => `${j.mandante} x ${j.visitante}`).join(', ')}`);
+      await enviar(montar(grupo)).catch((e) => log('Avisos: falha ao enviar:', e.message));
+      log(`${sufixo ? 'Bola rolando' : 'Aviso'} enviado: ${grupo.map((j) => `${j.mandante} x ${j.visitante}`).join(', ')}`);
     }
   }
 
