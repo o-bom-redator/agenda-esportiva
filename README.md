@@ -78,7 +78,6 @@ https://streamin.link/v/57b4f2a6
 Nos dois modos, ele devolve:
 
 - **Animação:** o vídeo sem som, que o Telegram mostra como GIF.
-- **gol.gif:** um GIF de verdade (até 15 s), pra mandar como GIF no WhatsApp.
 - **Legenda:** no formato do canal, com o campeonato e a rodada puxados da agenda do dia:
   ```
   🇮🇹 *Milan 2x4 Bologna* 🇮🇹

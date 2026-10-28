@@ -108,7 +108,6 @@ async function entregar(chat, titulo, arquivos) {
   }
   try {
     await enviarArquivo('sendAnimation', 'animation', chat, arquivos.animacao, 'gol.mp4', legenda);
-    await enviarArquivo('sendDocument', 'document', chat, arquivos.gif, 'gol.gif');
     await responder(chat, legenda); // texto solto, fácil de copiar
     log('GIF enviado:', titulo);
   } finally {

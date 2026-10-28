@@ -1,4 +1,4 @@
-// Baixa o vídeo de um link (streamin, streamain ou .mp4 direto) e converte pra GIF.
+// Baixa o vídeo de um link (streamin, streamain ou .mp4 direto) e converte pra GIF (vídeo sem som).
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -30,9 +30,7 @@ export async function acharVideo(link, tentativas = 2) {
   throw new Error('não achei o vídeo nessa página');
 }
 
-// Gera, numa pasta temporária:
-//   animacao.mp4: sem som, até 720px (o Telegram mostra como GIF)
-//   gol.gif: GIF de verdade, 480px, até 15 s (pra mandar como GIF no WhatsApp)
+// Gera animacao.mp4 numa pasta temporária: sem som, até 720px (o Telegram mostra como GIF)
 export async function fazerGif(link) {
   const pasta = fs.mkdtempSync(path.join(os.tmpdir(), 'gol-'));
   const video = path.join(pasta, 'original.mp4');
@@ -44,10 +42,7 @@ export async function fazerGif(link) {
   fs.writeFileSync(video, bytes);
 
   const animacao = path.join(pasta, 'animacao.mp4');
-  const gif = path.join(pasta, 'gol.gif');
   await rodar(ffmpeg, ['-y', '-v', 'error', '-i', video, '-an', '-vf', "fps=30,scale='min(720,iw)':-2",
     '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '26', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', animacao]);
-  await rodar(ffmpeg, ['-y', '-v', 'error', '-i', video, '-t', '15', '-vf',
-    'fps=12,scale=480:-2:flags=lanczos,split[a][b];[a]palettegen=max_colors=128:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4', gif]);
-  return { pasta, animacao, gif };
+  return { pasta, animacao };
 }
