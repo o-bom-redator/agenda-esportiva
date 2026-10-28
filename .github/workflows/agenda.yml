@@ -1,10 +1,11 @@
-# Todo dia às 8h (Brasília) gera as imagens da agenda e publica numa release do dia.
+# Todo dia às 5h (Brasília) gera as imagens da agenda e publica numa release do dia.
 # A release aparece em github.com/<usuario>/<repo>/releases e o GitHub avisa por e-mail/app.
+# Também publica a página com os links "Salvar no Google Agenda" (se o GitHub Pages estiver ligado).
 name: Agenda do dia
 
 on:
   schedule:
-    - cron: '0 11 * * *' # 11h UTC = 8h em Brasília (o GitHub pode atrasar alguns minutos)
+    - cron: '0 8 * * *' # 8h UTC = 5h em Brasília (o GitHub pode atrasar alguns minutos)
   workflow_dispatch:
     inputs:
       data:
@@ -13,11 +14,15 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
   agenda:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      pagina: ${{ steps.pages.outputs.ligado }}
     steps:
       - uses: actions/checkout@v4
 
@@ -45,6 +50,24 @@ jobs:
       - name: Gerar imagens
         run: node gerar.js --data "$DATA"
 
+      - name: Verificar se o GitHub Pages está ligado
+        id: pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if URL=$(gh api "repos/${{ github.repository }}/pages" --jq .html_url 2>/dev/null); then
+            echo "ligado=sim" >> "$GITHUB_OUTPUT"
+            echo "PAGINA_URL=$URL" >> "$GITHUB_ENV"
+          else
+            echo "ligado=nao" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Preparar página
+        if: steps.pages.outputs.ligado == 'sim'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
       - name: Publicar release do dia
         env:
           GH_TOKEN: ${{ github.token }}
@@ -54,8 +77,12 @@ jobs:
           gh release delete "$TAG" --cleanup-tag -y 2>/dev/null || true
 
           {
-            echo "### $(head -2 "$PASTA/mensagem.txt" | tail -1 | tr -d '_📅 ')"
+            echo "### $(sed -n 2p "$PASTA/mensagem.txt" | sed 's/^📅 _//; s/_$//')"
             echo
+            if [ -n "$PAGINA_URL" ]; then
+              echo "📅 **Página com os botões do Google Agenda:** $PAGINA_URL"
+              echo
+            fi
             for f in "$PASTA"/*.png; do
               echo "![$(basename "$f")](https://github.com/${{ github.repository }}/releases/download/$TAG/$(basename "$f"))"
             done
@@ -71,11 +98,23 @@ jobs:
           gh release create "$TAG" "$PASTA"/*.png "$PASTA/mensagem.txt" \
             --title "Agenda $(TZ=UTC date -d "$DATA" +%d/%m)" --notes-file notas.md --latest
 
-      - name: Apagar releases com mais de 10 dias
+      - name: Apagar releases de dias que já passaram
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          LIMITE=$(TZ=America/Sao_Paulo date -d '10 days ago' +%F)
+          LIMITE=$(TZ=America/Sao_Paulo date +%F)
           gh release list --limit 100 --json tagName --jq '.[].tagName' | grep '^agenda-' | while read -r TAG; do
             [[ "${TAG#agenda-}" < "$LIMITE" ]] && gh release delete "$TAG" --cleanup-tag -y || true
           done
+
+  # Publica a página no GitHub Pages (só roda quando o Pages está ligado no repositório)
+  pagina:
+    needs: agenda
+    if: needs.agenda.outputs.pagina == 'sim'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

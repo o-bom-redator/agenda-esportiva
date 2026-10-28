@@ -2,9 +2,9 @@ import puppeteer from 'puppeteer';
 import { ESPORTES } from './scraper.js';
 import { formatarData, ehHoje } from './mensagem.js';
 
-const CORES = { futebol: '#16a34a', basquete: '#ea580c', volei: '#d4a106', nfl: '#2563eb' };
+export const CORES = { futebol: '#16a34a', basquete: '#ea580c', volei: '#d4a106', nfl: '#2563eb' };
 
-const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+export const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
 // Classifica o canal pra dar cor ao "chip": YouTube (grátis), streaming ou TV.
 function tipoCanal(canal) {
@@ -15,7 +15,7 @@ function tipoCanal(canal) {
 
 // Separa "ESPN, Globo (BA, SP e parte da rede) e Premiere" em canais,
 // sem quebrar o que está dentro de parênteses.
-function separarCanais(transmissao) {
+export function separarCanais(transmissao) {
   const canais = [];
   let atual = '';
   let nivel = 0;
@@ -35,7 +35,7 @@ function separarCanais(transmissao) {
   return canais.map((c) => c.trim()).filter((c) => c && c !== '<>');
 }
 
-function chips(transmissao) {
+export function chips(transmissao) {
   const canais = separarCanais(transmissao || '');
   if (!canais.length) return '<span class="chip tv">A definir</span>';
   return canais.map((c) => `<span class="chip ${tipoCanal(c)}">${esc(c)}</span>`).join('');

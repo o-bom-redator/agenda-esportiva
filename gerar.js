@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { buscarTodos, chaveData } from './scraper.js';
 import { filtrarJogos, montarMensagem, formatarData } from './mensagem.js';
 import { gerarImagens } from './imagem.js';
+import { gerarPagina, gerarIcs } from './pagina.js';
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 const config = JSON.parse(fs.readFileSync(path.join(DIR, 'config.json'), 'utf8'));
@@ -35,6 +36,12 @@ try {
   const imagens = jogos.length ? await gerarImagens(jogos, data, config) : [];
   imagens.forEach((img, i) => fs.writeFileSync(path.join(pasta, `jogos-${data}-${i + 1}.png`), img));
   fs.writeFileSync(path.join(pasta, 'mensagem.txt'), montarMensagem(jogos, data)); // versão em texto, se quiser colar
+
+  // Página com os links do Google Agenda (publicada pelo GitHub Pages)
+  const site = path.join(DIR, 'site');
+  fs.mkdirSync(site, { recursive: true });
+  fs.writeFileSync(path.join(site, 'index.html'), gerarPagina(jogos, data));
+  fs.writeFileSync(path.join(site, 'agenda.ics'), gerarIcs(jogos, data));
 
   const resumo = imagens.length ? `${jogos.length} jogos em ${imagens.length} imagem(ns)` : 'Nenhum jogo com transmissão';
   log(`${formatarData(data)}: ${resumo} → ${pasta}`);
