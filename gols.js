@@ -46,7 +46,9 @@ const APELIDOS = {
   'man city': 'manchester city', 'man utd': 'manchester united', 'man united': 'manchester united',
   spurs: 'tottenham', wolves: 'wolverhampton', 'nottm forest': 'nottingham forest',
 };
-const VAZIAS = new Set(['fc', 'cf', 'ac', 'sc', 'afc', 'cd', 'ud', 'sd', 'de', 'da', 'do', 'del', 'la', 'the', 'club', 'f', 'w', 'women', 'feminino']);
+// Siglas e palavras que não ajudam a identificar o time (FC, SSC, VfB, "1. FC", "Bayer 04"...)
+const VAZIAS = new Set(['fc', 'cf', 'ac', 'sc', 'afc', 'cd', 'ud', 'sd', 'ssc', 'vfl', 'vfb', 'tsg', 'sv', 'ssv', 'sg', 'bsc', 'us', 'as',
+  'calcio', 'de', 'da', 'do', 'del', 'la', 'the', 'club', 'f', 'w', 'women', 'feminino', '1', '04', '05']);
 
 const normalizar = (nome) => {
   const n = nome.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();

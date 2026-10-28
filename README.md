@@ -56,14 +56,26 @@ Sugestão de legenda pra postar junto com as imagens:
 
 ## Bot de gols (Telegram)
 
-O bot transforma um post de gol do r/soccer em GIF com legenda pronta pro canal. Você cola no bot o título e o link do vídeo:
+O bot manda os gols dos jogos do dia em GIF, com legenda pronta pro canal, de dois jeitos.
+
+### Automático (goals.zone)
+
+A cada minuto o bot consulta o [goals.zone](https://goals.zone), que junta os clipes de gol postados no r/soccer. Quando sai um gol num jogo da agenda do dia, ele baixa o vídeo, faz o GIF e te manda. Você não precisa fazer nada.
+
+- **Quais jogos:** só os campeonatos de `avisos.campeonatos` no `config.json`. Pra usar uma lista diferente da dos avisos, crie `gols.campeonatos`. Pra desligar, use `"gols": { "automatico": false }`.
+- **Vídeo no Reddit:** quando o clipe só existe no próprio Reddit (`v.redd.it`), o bot manda só a legenda, porque o Reddit bloqueia robôs.
+- **Uso educado:** o bot faz 1 consulta por minuto e se identifica. Os termos do goals.zone não permitem republicar o conteúdo deles. Se o autor bloquear o acesso, o modo manual continua funcionando.
+
+### Manual (colar o link)
+
+Pra um gol que o automático não pegou, cole no bot o título e o link do vídeo:
 
 ```
 Milan 2-[4] Bologna - Samuel Mbangula hat trick 86'
 https://streamin.link/v/57b4f2a6
 ```
 
-E ele devolve:
+Nos dois modos, ele devolve:
 
 - **Animação:** o vídeo sem som, que o Telegram mostra como GIF.
 - **gol.gif:** um GIF de verdade (até 15 s), pra mandar como GIF no WhatsApp.
@@ -74,9 +86,9 @@ E ele devolve:
   🏆 Campeonato Italiano | 9ª Rodada
   ```
 
-Se mandar só o link, ele faz o GIF e pede o título em seguida. Os detalhes em inglês viram português: OG → gol contra, penalty → pênalti, hat trick, free kick → falta, great goal → golaço.
+No modo manual, se mandar só o link, ele faz o GIF e pede o título em seguida. Os detalhes em inglês viram português: OG → gol contra, penalty → pênalti, hat trick, free kick → falta, great goal → golaço.
 
-**Links aceitos:** streamin.link / streamin.me, streamain.com e qualquer link direto de `.mp4`.
+**Links aceitos:** streamin.link / streamin.me, streama.in / streamain.com e qualquer link direto de `.mp4`, com ou sem `https://`.
 
 ### Onde o bot roda
 
@@ -151,6 +163,8 @@ As imagens ficam em `imagens/AAAA-MM-DD/` e a página em `site/`. No Mac, aparec
 | `abrirPasta` | No Mac, abre a pasta das imagens ao terminar (padrão `true`) |
 | `avisos.minutosAntes` | Quantos minutos antes do jogo o bot avisa (padrão 15) |
 | `avisos.campeonatos` | Campeonatos que geram aviso, com o nome igual ao do futnatv. Vazio = todos |
+| `gols.automatico` | `true` manda os gols sozinho (goals.zone). `false` deixa só o modo manual |
+| `gols.campeonatos` | Opcional: campeonatos dos gols automáticos. Sem ela, usa a lista dos avisos |
 
 Depois de alterar, faça commit e push pra que o GitHub use a versão nova.
 
@@ -167,6 +181,7 @@ Depois de alterar, faça commit e push pra que o GitHub use a versão nova.
 | `pagina.js` | Página com links do Google Agenda e arquivo `.ics` |
 | `bot.js` | Bot do Telegram que transforma o post de gol em GIF com legenda |
 | `gols.js` | Lê o título do post do r/soccer, acha o jogo na agenda e monta a legenda |
+| `goalszone.js` | Busca automática dos gols no goals.zone |
 | `gif.js` | Baixa o vídeo do link e converte em GIF (ffmpeg) |
 | `avisos.js` | Avisos de início de jogo |
 | `canais.js` | Link de cada canal de transmissão |

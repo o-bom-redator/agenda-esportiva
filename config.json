@@ -35,5 +35,8 @@
       "Superliga Masculina",
       "NFL"
     ]
+  },
+  "gols": {
+    "automatico": true
   }
 }

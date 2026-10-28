@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { lerTitulo, acharJogo, jogosDeAgora, montarLegenda } from './gols.js';
 import { fazerGif } from './gif.js';
 import { iniciarAvisos, inicio } from './avisos.js';
+import { iniciarGols } from './goalszone.js';
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 const config = JSON.parse(fs.readFileSync(path.join(DIR, 'config.json'), 'utf8'));
@@ -121,12 +122,40 @@ async function salvarDono(chat) {
   fs.writeFileSync(ENV, `${atual.replace(/^TELEGRAM_CHAT_ID=.*\n?/m, '').trimEnd()}\nTELEGRAM_CHAT_ID=${dono}\n`);
 }
 
-// Avisos de início de jogo (vão pro dono; você copia pro canal)
-let proximos = () => [];
-function ligarAvisos() {
-  proximos = iniciarAvisos(config, (texto) => responder(dono, texto), log, path.join(DIR, 'estado', 'avisados.json'));
+// Gol achado automaticamente no goals.zone: tenta os links de vídeo em ordem e manda o GIF
+async function enviarGol(titulo, links) {
+  // vídeos hospedados no próprio Reddit (v.redd.it) são bloqueados pra robôs: manda só a legenda
+  const fora = links.filter((l) => !/(^|\/\/)(v\.)?redd\.?it/i.test(l));
+  if (!fora.length) {
+    const lance = lerTitulo(titulo);
+    const jogo = lance && acharJogo(lance, await jogosDeAgora().catch(() => []));
+    return responder(dono, `${lance ? montarLegenda(lance, jogo) : `⚽ ${titulo}`}\n\n(sem vídeo: o clipe está hospedado no Reddit)`);
+  }
+  let erro = new Error('post sem link de vídeo');
+  for (const link of fora) {
+    try {
+      return await entregar(dono, titulo, await fazerGif(link));
+    } catch (e) {
+      erro = e;
+    }
+  }
+  throw erro;
 }
-if (dono) ligarAvisos();
+
+// Avisos de início de jogo e gols automáticos (vão pro dono; você copia pro canal)
+let proximos = () => [];
+function ligarAutomaticos() {
+  proximos = iniciarAvisos(config, (texto) => responder(dono, texto), log, path.join(DIR, 'estado', 'avisados.json'));
+  if (config.gols?.automatico !== false) {
+    iniciarGols({
+      arquivo: path.join(DIR, 'estado', 'gols.json'),
+      campeonatos: config.gols?.campeonatos ?? config.avisos?.campeonatos ?? [],
+      entregar: enviarGol,
+      log,
+    });
+  }
+}
+if (dono) ligarAutomaticos();
 
 function listarProximos() {
   const jogos = proximos().slice(0, 15);
@@ -152,7 +181,7 @@ while (Date.now() < PARAR) {
       if (!dono && msg.text.startsWith('/start')) {
         await salvarDono(chat);
         log('Dono do bot salvo:', chat);
-        ligarAvisos();
+        ligarAutomaticos();
       }
       if (String(chat) !== dono) {
         await responder(chat, 'Este bot é particular.');
