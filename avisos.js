@@ -11,7 +11,7 @@ import { filtrarJogos } from './mensagem.js';
 import { separarCanais } from './imagem.js';
 import { linkCanal } from './canais.js';
 
-const ATUALIZAR = 2 * 3_600_000; // relê a agenda do futnatv a cada 2 h (horário pode mudar)
+const ATUALIZAR = 30 * 60_000; // relê a agenda do futnatv a cada 30 min (horário pode mudar; falha de um esporte se corrige logo)
 const MINIMO = 3 * 60_000; // se faltar menos de 3 min, já não vale avisar
 
 // Hora de início do jogo (horário de Brasília, sem horário de verão)

@@ -1,9 +1,6 @@
 // Link de cada canal de transmissão: leva pro site/app do canal (não pra partida).
 // Quem já tem conta cai direto no ao vivo; quem não tem, faz o cadastro.
 // No futuro, dá pra trocar os endereços por links de afiliado aqui.
-//
-// Canais do YouTube ("YouTube (CazéTV)", "YT (GE TV)") viram uma busca pelo canal + jogo,
-// que traz a live da partida no topo.
 export const LINKS = [
   [/disney|espn|star\+/i, 'https://www.disneyplus.com/pt-br'],
   [/sportv|globo|premiere/i, 'https://globoplay.globo.com'],
@@ -19,16 +16,36 @@ export const LINKS = [
   [/\bband\b/i, 'https://www.band.uol.com.br'],
 ];
 
-// Canais que transmitem principalmente pelo YouTube, mesmo quando o futnatv não escreve "YouTube"
+// Canais oficiais no YouTube. O link abre a aba "Ao vivo" do canal, onde fica a live do jogo.
+// Os que transmitem só pelo YouTube (CazéTV, GE TV...) usam esse link mesmo sem "YouTube" no nome.
+export const YOUTUBE = [
+  [/caz[eé]/i, 'CazeTV'],
+  [/ge ?tv/i, 'getv'],
+  [/x ?sports/i, 'xsports.brasil'],
+  [/sporty ?net/i, 'SportyNetBrasil'],
+  [/goat/i, 'canalgoatbr'],
+  [/uol esporte/i, 'UOLEsporte'],
+  [/\bnbb\b/i, 'NBBoficial'],
+  [/espn/i, 'ESPNBrasil'],
+  [/link alviverde/i, 'LinkAlviverde'],
+  [/carioc/i, 'Cariocao'],
+  [/n ?sports/i, 'NSports'],
+];
 const SO_YOUTUBE = /caz[eé]|ge ?tv|sporty ?net|x ?sports|goat|uol esporte/i;
 
+// Canal do YouTube que não está na lista: busca pelo canal + jogo (último recurso)
 const buscaYoutube = (canal, jogo) =>
   `https://www.youtube.com/results?${new URLSearchParams({ search_query: `${canal} ${jogo.mandante} x ${jogo.visitante} ao vivo` })}`;
 
-// "YouTube (CazéTV)" → nome "CazéTV" e link de busca; "Disney+" → link do Disney+
+function linkYoutube(canal, jogo) {
+  const handle = YOUTUBE.find(([re]) => re.test(canal))?.[1];
+  return handle ? `https://www.youtube.com/@${handle}/streams` : buscaYoutube(canal, jogo);
+}
+
+// "YouTube (CazéTV)" → nome "CazéTV" e link do canal; "Disney+" → link do Disney+
 export function linkCanal(canal, jogo) {
   const yt = canal.match(/^(?:youtube|yt)\s*\((.+)\)$/i);
-  if (yt) return { nome: yt[1], link: buscaYoutube(yt[1], jogo) };
-  if (SO_YOUTUBE.test(canal)) return { nome: canal, link: buscaYoutube(canal, jogo) };
+  if (yt) return { nome: yt[1], link: linkYoutube(yt[1], jogo) };
+  if (SO_YOUTUBE.test(canal)) return { nome: canal, link: linkYoutube(canal, jogo) };
   return { nome: canal, link: LINKS.find(([re]) => re.test(canal))?.[1] || '' };
 }

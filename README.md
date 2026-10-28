@@ -119,16 +119,16 @@ O mesmo bot te avisa **30 minutos antes** dos jogos principais, com o link de on
 
 👉 Record: https://recordplus.com
 👉 Premiere: https://globoplay.globo.com
-👉 CazéTV: https://www.youtube.com/results?search_query=CazéTV+Fluminense+x+Internacional+ao+vivo
+👉 CazéTV: https://www.youtube.com/@CazeTV/streams
 ```
 
 - **Bola rolando:** na hora marcada, chega um segundo aviso, "🟢 A bola rola para:", com os jogos daquele horário e os links. Pra desligar, use `avisos.noInicio: false`.
 - **Agrupados:** jogos que começam no mesmo horário saem numa mensagem só.
-- **Links:** levam pro site do canal (Disney+, Globoplay, HBO Max...). Quem tem conta já cai no ao vivo. Pros canais do YouTube, o link é uma busca pelo canal + jogo, que traz a live no topo. Os links ficam em `canais.js`, e dá pra trocá-los por links de afiliado no futuro.
+- **Links:** levam pro site do canal (Disney+, Globoplay, HBO Max...). Quem tem conta já cai no ao vivo. Pros canais do YouTube (CazéTV, GE TV, XSports, NBB...), o link abre a aba de lives do canal oficial. Os links ficam em `canais.js`, e dá pra trocá-los por links de afiliado no futuro.
 - **Quais jogos:** só os campeonatos listados em `avisos.campeonatos` no `config.json`. O nome precisa ser igual ao do futnatv (ex.: `Brasileirão - Série A`, `Campeonato Italiano`, `NBA`). Com a lista vazia, avisa todos.
 - **Antecedência:** `avisos.minutosAntes` (hoje 30).
 - **Próximos avisos:** mande `/avisos` pro bot.
-- **Sem perder aviso:** o bot relê a agenda a cada 2 horas, então pega mudanças de horário. Na troca de turno, ele lembra quais jogos já avisou. Se um turno começar atrasado, ainda avisa os jogos que não começaram, com os minutos que faltam.
+- **Sem perder aviso:** o bot relê a agenda a cada 30 minutos, então pega mudanças de horário. Na troca de turno, ele lembra quais jogos já avisou. Se um turno começar atrasado, ainda avisa os jogos que não começaram, com os minutos que faltam.
 
 **Alternativa no Mac:** o `./bot.sh` deixa o bot ligado no Mac (liga ao entrar e volta se cair), e `./bot.sh remover` desliga. Só funciona com o Mac ligado.
 
