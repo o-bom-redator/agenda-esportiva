@@ -11,6 +11,7 @@ import { buscarTodos, chaveData } from './scraper.js';
 import { filtrarJogos, montarMensagem, formatarData } from './mensagem.js';
 import { gerarImagens } from './imagem.js';
 import { gerarPagina, gerarIcs } from './pagina.js';
+import { telegramLigado, enviarAgenda } from './telegram.js';
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 const config = JSON.parse(fs.readFileSync(path.join(DIR, 'config.json'), 'utf8'));
@@ -42,6 +43,13 @@ try {
   fs.mkdirSync(site, { recursive: true });
   fs.writeFileSync(path.join(site, 'index.html'), gerarPagina(jogos, data));
   fs.writeFileSync(path.join(site, 'agenda.ics'), gerarIcs(jogos, data));
+
+  // Imagens no Telegram (no GitHub, quando os segredos do bot existem)
+  if (telegramLigado()) {
+    await enviarAgenda(imagens, data, jogos.length, config.pagina)
+      .then(() => log('Imagens enviadas no Telegram.'))
+      .catch((e) => log('Telegram:', e.message)); // falha aqui não derruba a agenda
+  }
 
   const resumo = imagens.length ? `${jogos.length} jogos em ${imagens.length} imagem(ns)` : 'Nenhum jogo com transmissão';
   log(`${formatarData(data)}: ${resumo} → ${pasta}`);

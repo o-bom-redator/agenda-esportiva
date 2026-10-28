@@ -28,7 +28,9 @@ GitHub Actions (todo dia às 5h)
    └─ GitHub Pages           → página atualizada
 ```
 
-O GitHub avisa por e-mail e no app quando sai a release nova. Se o aviso não chegar, ative em **Watch → Custom → Releases** no repositório.
+As imagens também chegam no seu **Telegram**, pelo bot dos gols, num álbum com a legenda pronta pra postar no canal. É só configurar os segredos do bot (veja "Bot de gols"). Sem eles, as imagens ficam só na release.
+
+O GitHub também avisa por e-mail e no app quando sai a release nova. Se o aviso não chegar, ative em **Watch → Custom → Releases** no repositório.
 
 ### O que vai na agenda
 
@@ -159,6 +161,7 @@ As imagens ficam em `imagens/AAAA-MM-DD/` e a página em `site/`. No Mac, aparec
 | `ocultarFemininos` | `true` tira jogos femininos |
 | `ocultarCampeonatos` | Lista de campeonatos a esconder, ex. `["MLS", "Campeonato Saudita"]` |
 | `jogosPorImagem` | Acima disso, divide em mais imagens (padrão 22) |
+| `pagina` | Link da página da agenda, usado na legenda do Telegram |
 | `abrirPasta` | No Mac, abre a pasta das imagens ao terminar (padrão `true`) |
 | `avisos.minutosAntes` | Quantos minutos antes do jogo o bot avisa (padrão 15) |
 | `avisos.campeonatos` | Campeonatos que geram aviso, com o nome igual ao do futnatv. Vazio = todos |
@@ -180,6 +183,7 @@ Depois de alterar, faça commit e push pra que o GitHub use a versão nova.
 | `pagina.js` | Página com links do Google Agenda e arquivo `.ics` |
 | `bot.js` | Bot do Telegram que transforma o post de gol em GIF com legenda |
 | `gols.js` | Lê o título do post do r/soccer, acha o jogo na agenda e monta a legenda |
+| `telegram.js` | Manda as imagens da agenda pro Telegram |
 | `goalszone.js` | Busca automática dos gols no goals.zone |
 | `gif.js` | Baixa o vídeo do link e converte em GIF (ffmpeg) |
 | `avisos.js` | Avisos de início de jogo |

@@ -49,6 +49,10 @@ jobs:
 
       - name: Gerar imagens
         run: node gerar.js --data "$DATA"
+        env:
+          # manda as imagens pro seu Telegram (pelo bot dos gols)
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
       - name: Verificar se o GitHub Pages está ligado
         id: pages
