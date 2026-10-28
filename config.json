@@ -13,7 +13,7 @@
   "ocultarCampeonatos": [],
   "abrirPasta": true,
   "avisos": {
-    "minutosAntes": 15,
+    "minutosAntes": 30,
     "campeonatos": [
       "Brasileirão - Série A",
       "Brasileirão - Série B",
