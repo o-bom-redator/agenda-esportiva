@@ -1,0 +1,51 @@
+// Baixa o vídeo de um link (streamin, streamain ou .mp4 direto) e converte pra GIF.
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import ffmpeg from 'ffmpeg-static';
+
+const rodar = promisify(execFile);
+const LIMITE = 50 * 1024 * 1024; // 50 MB
+
+// Acha o endereço do .mp4 dentro da página do vídeo.
+export async function acharVideo(link) {
+  if (/\.(mp4|webm|mov)(\?|$)/i.test(link)) return link;
+  // streamain.com/en/ID/watch → a página "embed" é a que tem o vídeo
+  const sa = link.match(/streamain\.com\/(?:\w{2}\/)?([A-Za-z0-9]+)\/watch/);
+  const pagina = sa ? `https://streamain.com/embed/${sa[1]}` : link;
+
+  const res = await fetch(pagina, { redirect: 'follow' });
+  if (!res.ok) throw new Error(`a página do vídeo respondeu ${res.status}`);
+  const html = await res.text();
+  const achado =
+    html.match(/<meta[^>]+property=['"]og:video(?::url|:secure_url)?['"][^>]+content=['"]([^'"]+)['"]/i)?.[1] ||
+    html.match(/<video[^>]+data-link=['"]([^'"]+)['"]/i)?.[1] ||
+    html.match(/<source[^>]+src=['"]([^'"]+)['"]/i)?.[1] ||
+    html.match(/<video[^>]+src=['"]([^'"]+)['"]/i)?.[1];
+  if (!achado) throw new Error('não achei o vídeo nessa página');
+  return new URL(achado.replace(/&amp;/g, '&'), res.url).href;
+}
+
+// Gera, numa pasta temporária:
+//   animacao.mp4: sem som, até 720px (o Telegram mostra como GIF)
+//   gol.gif: GIF de verdade, 480px, até 15 s (pra mandar como GIF no WhatsApp)
+export async function fazerGif(link) {
+  const pasta = fs.mkdtempSync(path.join(os.tmpdir(), 'gol-'));
+  const video = path.join(pasta, 'original.mp4');
+
+  const res = await fetch(await acharVideo(link));
+  if (!res.ok) throw new Error(`o vídeo respondeu ${res.status}`);
+  const bytes = Buffer.from(await res.arrayBuffer());
+  if (bytes.length > LIMITE) throw new Error('vídeo grande demais (mais de 50 MB)');
+  fs.writeFileSync(video, bytes);
+
+  const animacao = path.join(pasta, 'animacao.mp4');
+  const gif = path.join(pasta, 'gol.gif');
+  await rodar(ffmpeg, ['-y', '-v', 'error', '-i', video, '-an', '-vf', "fps=30,scale='min(720,iw)':-2",
+    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '26', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', animacao]);
+  await rodar(ffmpeg, ['-y', '-v', 'error', '-i', video, '-t', '15', '-vf',
+    'fps=12,scale=480:-2:flags=lanczos,split[a][b];[a]palettegen=max_colors=128:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4', gif]);
+  return { pasta, animacao, gif };
+}

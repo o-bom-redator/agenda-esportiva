@@ -6,3 +6,5 @@ imagens/
 *.log
 .DS_Store
 site/
+.env
+estado/

@@ -54,6 +54,74 @@ Sugestão de legenda pra postar junto com as imagens:
 
 ---
 
+## Bot de gols (Telegram)
+
+O bot transforma um post de gol do r/soccer em GIF com legenda pronta pro canal. Você cola no bot o título e o link do vídeo:
+
+```
+Milan 2-[4] Bologna - Samuel Mbangula hat trick 86'
+https://streamin.link/v/57b4f2a6
+```
+
+E ele devolve:
+
+- **Animação:** o vídeo sem som, que o Telegram mostra como GIF.
+- **gol.gif:** um GIF de verdade (até 15 s), pra mandar como GIF no WhatsApp.
+- **Legenda:** no formato do canal, com o campeonato e a rodada puxados da agenda do dia:
+  ```
+  🇮🇹 *Milan 2x4 Bologna* 🇮🇹
+  ⚽ Samuel Mbangula (hat-trick) / 86'
+  🏆 Campeonato Italiano | 9ª Rodada
+  ```
+
+Se mandar só o link, ele faz o GIF e pede o título em seguida. Os detalhes em inglês viram português: OG → gol contra, penalty → pênalti, hat trick, free kick → falta, great goal → golaço.
+
+**Links aceitos:** streamin.link / streamin.me, streamain.com e qualquer link direto de `.mp4`.
+
+### Onde o bot roda
+
+No **GitHub Actions** (workflow `bot.yml`), em turnos de 6 h: **das 8h às 2h** (Brasília). Das 2h às 8h ele fica desligado. Mensagens mandadas nesse intervalo são respondidas quando o turno das 8h começa.
+
+Pra mudar os horários, edite o `cron` e o `PARAR_AS` no `.github/workflows/bot.yml`. Quando tiver um servidor próprio, o bot roda direto lá com `node bot.js`, sem turnos.
+
+### Configurar (uma vez)
+
+1. No Telegram, abra o **@BotFather**, mande `/newbot` e escolha um nome. Ele te dá um **token**.
+2. Descubra o seu número de chat: mande qualquer mensagem pro **@userinfobot** no Telegram. Ele responde com o seu `Id`.
+3. No GitHub, vá em **Settings → Secrets and variables → Actions → New repository secret** e crie dois segredos:
+   - `TELEGRAM_TOKEN`: o token do BotFather
+   - `TELEGRAM_CHAT_ID`: o seu número de chat
+4. Ligue o primeiro turno em **Actions → Bot de gols e avisos → Run workflow**. Os próximos ligam sozinhos.
+5. No Telegram, abra o seu bot e mande `/start`.
+
+**Pra testar no computador:** copie `.env.exemplo` pra `.env`, cole o token e rode `npm run bot`. Desligue o bot do GitHub antes (**Actions → Bot de gols e avisos → ··· → Disable workflow**), porque o Telegram não deixa dois bots iguais ligados ao mesmo tempo.
+
+### Avisos de início de jogo
+
+O mesmo bot te avisa **15 minutos antes** dos jogos principais, com o link de onde assistir, pra você colar no canal:
+
+```
+⏰ Daqui a 15 minutos, às 19h30, começa *Fluminense x Internacional* pelo Brasileirão - Série A.
+📺 Transmissão: Record, Premiere e CazéTV
+
+👉 Record: https://recordplus.com
+👉 Premiere: https://globoplay.globo.com
+👉 CazéTV: https://www.youtube.com/results?search_query=CazéTV+Fluminense+x+Internacional+ao+vivo
+```
+
+- **Agrupados:** jogos que começam no mesmo horário saem numa mensagem só.
+- **Links:** levam pro site do canal (Disney+, Globoplay, HBO Max...). Quem tem conta já cai no ao vivo. Pros canais do YouTube, o link é uma busca pelo canal + jogo, que traz a live no topo. Os links ficam em `canais.js`, e dá pra trocá-los por links de afiliado no futuro.
+- **Quais jogos:** só os campeonatos listados em `avisos.campeonatos` no `config.json`. O nome precisa ser igual ao do futnatv (ex.: `Brasileirão - Série A`, `Campeonato Italiano`, `NBA`). Com a lista vazia, avisa todos.
+- **Antecedência:** `avisos.minutosAntes` (padrão 15).
+- **Próximos avisos:** mande `/avisos` pro bot.
+- **Sem perder aviso:** o bot relê a agenda a cada 2 horas, então pega mudanças de horário. Na troca de turno, ele lembra quais jogos já avisou. Se um turno começar atrasado, ainda avisa os jogos que não começaram, com os minutos que faltam.
+
+**Alternativa no Mac:** o `./bot.sh` deixa o bot ligado no Mac (liga ao entrar e volta se cair), e `./bot.sh remover` desliga. Só funciona com o Mac ligado.
+
+Os vídeos são das emissoras donas dos direitos. Use com moderação e sem fins comerciais.
+
+---
+
 ## Gerar fora do horário
 
 **No GitHub:** **Actions → Agenda do dia → Run workflow**, depois escolha `hoje`, `amanha` ou uma data (`2026-10-28`).
@@ -81,6 +149,8 @@ As imagens ficam em `imagens/AAAA-MM-DD/` e a página em `site/`. No Mac, aparec
 | `ocultarCampeonatos` | Lista de campeonatos a esconder, ex. `["MLS", "Campeonato Saudita"]` |
 | `jogosPorImagem` | Acima disso, divide em mais imagens (padrão 22) |
 | `abrirPasta` | No Mac, abre a pasta das imagens ao terminar (padrão `true`) |
+| `avisos.minutosAntes` | Quantos minutos antes do jogo o bot avisa (padrão 15) |
+| `avisos.campeonatos` | Campeonatos que geram aviso, com o nome igual ao do futnatv. Vazio = todos |
 
 Depois de alterar, faça commit e push pra que o GitHub use a versão nova.
 
@@ -95,6 +165,13 @@ Depois de alterar, faça commit e push pra que o GitHub use a versão nova.
 | `mensagem.js` | Filtros e versão em texto (formato WhatsApp) |
 | `imagem.js` | Layout e geração das imagens PNG |
 | `pagina.js` | Página com links do Google Agenda e arquivo `.ics` |
+| `bot.js` | Bot do Telegram que transforma o post de gol em GIF com legenda |
+| `gols.js` | Lê o título do post do r/soccer, acha o jogo na agenda e monta a legenda |
+| `gif.js` | Baixa o vídeo do link e converte em GIF (ffmpeg) |
+| `avisos.js` | Avisos de início de jogo |
+| `canais.js` | Link de cada canal de transmissão |
+| `bot.sh` | Deixa o bot ligado no Mac (launchd) |
+| `.github/workflows/bot.yml` | Turnos do bot no GitHub Actions |
 | `.github/workflows/agenda.yml` | Agendamento diário, release e GitHub Pages |
 | `agendar.sh` | Alternativa: agendar no próprio Mac (launchd). Fica desligado |
 | `enviar.js` | Alternativa: envio automático pra um grupo de WhatsApp (whatsapp-web.js, não oficial). Fica desligado |

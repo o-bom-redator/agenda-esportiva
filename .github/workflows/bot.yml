@@ -1,0 +1,53 @@
+name: Bot de gols e avisos
+
+# O bot fica ligado em turnos de 6 h, das 8h às 2h (Brasília):
+#   8h–14h, 14h–20h e 20h–2h. Das 2h às 8h fica desligado; as mensagens
+#   que você mandar nesse intervalo são respondidas quando o turno das 8h começa.
+on:
+  schedule:
+    - cron: '0 11,17,23 * * *' # 8h, 14h e 20h em Brasília
+  workflow_dispatch:
+
+# Só um bot por vez: se um turno atrasar, o próximo espera ele terminar.
+concurrency:
+  group: bot
+  cancel-in-progress: false
+
+jobs:
+  bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 358
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true' # o bot não usa o Chrome
+
+      # Lista de jogos já avisados (pra não repetir aviso quando o turno troca)
+      - name: Recuperar avisos já enviados
+        uses: actions/cache/restore@v4
+        with:
+          path: estado
+          key: bot-estado-${{ github.run_id }}
+          restore-keys: bot-estado-
+
+      - name: Rodar o bot
+        run: mkdir -p estado && node bot.js
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PARAR_AS: '5,11,17,23'
+
+      - name: Guardar avisos enviados
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: estado
+          key: bot-estado-${{ github.run_id }}

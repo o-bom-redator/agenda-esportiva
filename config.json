@@ -11,5 +11,29 @@
   "ocultarBase": true,
   "ocultarFemininos": false,
   "ocultarCampeonatos": [],
-  "abrirPasta": true
+  "abrirPasta": true,
+  "avisos": {
+    "minutosAntes": 15,
+    "campeonatos": [
+      "Brasileirão - Série A",
+      "Brasileirão - Série B",
+      "Copa do Brasil",
+      "Libertadores",
+      "Sul-Americana",
+      "Champions League",
+      "Campeonato Inglês",
+      "Campeonato Espanhol",
+      "Campeonato Italiano",
+      "Campeonato Alemão",
+      "Campeonato Francês",
+      "Campeonato Português",
+      "Copa do Rei",
+      "Copa da Alemanha",
+      "Copa da Liga Inglesa",
+      "NBA",
+      "NBB",
+      "Superliga Masculina",
+      "NFL"
+    ]
+  }
 }
