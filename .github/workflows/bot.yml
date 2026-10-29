@@ -1,19 +1,26 @@
 name: Bot de gols e avisos
 
 # O bot fica ligado o dia todo, em turnos de até 6 h (limite do GitHub) que acabam
-# às 2h, 8h, 14h e 20h (Brasília). O turno seguinte já está na fila e assume na hora.
+# às 2h, 8h, 14h e 20h (Brasília). Ao terminar, cada turno liga o próximo sozinho.
 on:
   schedule:
-    # De hora em hora, fora da hora cheia: o agendamento do GitHub atrasa ou pula execuções.
-    # Com o bot já ligado, a nova execução fica na fila e assume quando o turno atual acaba,
-    # então sempre tem um bot rodando (sem buraco de madrugada).
+    # Reserva: o agendamento do GitHub atrasa horas ou pula execuções (em 29/10 pulou
+    # quase todas), então ele só serve pra religar o bot se a corrente de turnos quebrar.
     - cron: '17 * * * *'
   workflow_dispatch:
+    inputs:
+      minutos:
+        description: 'Duração máxima deste turno em minutos (vazio = normal; útil pra testar a troca de turno)'
+        default: ''
 
 # Só um bot por vez: se um turno atrasar, o próximo espera ele terminar.
 concurrency:
   group: bot
   cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write # pra ligar o próximo turno
 
 jobs:
   bot:
@@ -41,11 +48,13 @@ jobs:
           restore-keys: bot-estado-
 
       - name: Rodar o bot
+        id: bot
         run: mkdir -p estado && node bot.js
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           PARAR_AS: '5,11,17,23'
+          MINUTOS_MAX: ${{ github.event.inputs.minutos }}
 
       - name: Guardar avisos enviados
         if: always()
@@ -53,3 +62,11 @@ jobs:
         with:
           path: estado
           key: bot-estado-${{ github.run_id }}
+
+      # Liga o próximo turno, que espera na fila (concurrency) e assume quando este acabar.
+      # Não religa se o turno foi cancelado à mão ou se o bot quebrou (evita ficar num loop).
+      - name: Ligar o próximo turno
+        if: ${{ !cancelled() && steps.bot.outcome == 'success' }}
+        run: gh workflow run bot.yml -R "${{ github.repository }}"
+        env:
+          GH_TOKEN: ${{ github.token }}

@@ -46,7 +46,7 @@ function horaDeParar() {
   const fins = horas.flatMap((h) => [0, 1].map((d) =>
     Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth(), hoje.getUTCDate() + d, h) - 2 * 60_000));
   const proximo = Math.min(...fins.filter((t) => t > Date.now() + 10 * 60_000));
-  return Math.min(proximo, Date.now() + 350 * 60_000);
+  return Math.min(proximo, Date.now() + (Number(process.env.MINUTOS_MAX) || 350) * 60_000);
 }
 const PARAR = horaDeParar();
 const log = (...a) => console.log(new Date().toLocaleString('pt-BR'), '-', ...a);
