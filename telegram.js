@@ -23,8 +23,9 @@ export function legendaAgenda(data, totalJogos, pagina) {
 }
 
 // imagens: lista de Buffers PNG. Vão juntas num álbum (até 10), com a legenda na primeira.
-export async function enviarAgenda(imagens, data, totalJogos, pagina) {
-  const chat = process.env.TELEGRAM_CHAT_ID;
+// grupo: id do grupo do Telegram (config.json → telegram.grupo); sem ele, vai pro seu privado.
+export async function enviarAgenda(imagens, data, totalJogos, pagina, grupo) {
+  const chat = process.env.TELEGRAM_GRUPO || grupo || process.env.TELEGRAM_CHAT_ID;
   const legenda = legendaAgenda(data, totalJogos, pagina);
   if (!imagens.length) {
     return chamar('sendMessage', new URLSearchParams({ chat_id: chat, text: `${legenda}\n\n(nenhum jogo com transmissão hoje)` }));

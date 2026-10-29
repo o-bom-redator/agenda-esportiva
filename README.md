@@ -60,13 +60,19 @@ Sugestão de legenda pra postar junto com as imagens:
 
 O bot manda os gols dos jogos do dia em GIF, com legenda pronta pro canal, de dois jeitos.
 
-### Automático (goals.zone)
+### Automático (goals.zone + r/futebol)
 
-A cada minuto o bot consulta o [goals.zone](https://goals.zone), que junta os clipes de gol postados no r/soccer. Quando sai um gol num jogo da agenda do dia, ele baixa o vídeo, faz o GIF e te manda. Você não precisa fazer nada.
+O bot olha duas fontes. Quando sai um gol num jogo da agenda do dia, ele baixa o vídeo, faz o GIF e te manda. Você não precisa fazer nada.
 
+- **[goals.zone](https://goals.zone)**, a cada minuto: junta os clipes de gol do r/soccer (forte no futebol europeu).
+- **[r/futebol](https://www.reddit.com/r/futebol/)**, a cada 2 minutos: posts com a etiqueta **Lances** (forte no Brasileirão). Só entram os posts de gol, com o placar entre colchetes (ex.: `Bahia 2 x [2] São Paulo | 50' Bobadilla`). Polêmicas e defesas ficam de fora.
+- **Sem repetir:** o mesmo gol (jogo + placar) só chega uma vez, mesmo que apareça nas duas fontes ou em vários vídeos.
 - **Quais jogos:** só os campeonatos de `avisos.campeonatos` no `config.json`. Pra usar uma lista diferente da dos avisos, crie `gols.campeonatos`. Pra desligar, use `"gols": { "automatico": false }`.
-- **Vídeo no Reddit:** quando o clipe só existe no próprio Reddit (`v.redd.it`), o bot manda só a legenda, porque o Reddit bloqueia robôs.
-- **Uso educado:** o bot faz 1 consulta por minuto e se identifica. Os termos do goals.zone não permitem republicar o conteúdo deles. Se o autor bloquear o acesso, o modo manual continua funcionando.
+- **Uso educado:** o bot faz poucas consultas e se identifica. Os termos do goals.zone não permitem republicar o conteúdo deles. Se alguma fonte bloquear o acesso, a outra e o modo manual continuam funcionando.
+
+### Grupo do Telegram
+
+Pra receber avisos, gols e a agenda num grupo: adicione o bot no grupo e mande `/grupo` lá. Ele responde com o id do grupo. Coloque esse id no `config.json` (`"telegram": { "grupo": "-100..." }`), assim a agenda da manhã também vai pro grupo. `/privado` (no grupo) volta a mandar tudo no seu chat.
 
 ### Manual (colar o link)
 
@@ -169,6 +175,7 @@ As imagens ficam em `imagens/AAAA-MM-DD/` e a página em `site/`. No Mac, aparec
 | `avisos.campeonatos` | Campeonatos que geram aviso, com o nome igual ao do futnatv. Vazio = todos |
 | `gols.automatico` | `true` manda os gols sozinho (goals.zone). `false` deixa só o modo manual |
 | `gols.campeonatos` | Opcional: campeonatos dos gols automáticos. Sem ela, usa a lista dos avisos |
+| `telegram.grupo` | Id do grupo do Telegram que recebe avisos, gols e agenda. Sem ele, vai pro seu privado |
 
 Depois de alterar, faça commit e push pra que o GitHub use a versão nova.
 
@@ -184,9 +191,10 @@ Depois de alterar, faça commit e push pra que o GitHub use a versão nova.
 | `imagem.js` | Layout e geração das imagens PNG |
 | `pagina.js` | Página com links do Google Agenda e arquivo `.ics` |
 | `bot.js` | Bot do Telegram que transforma o post de gol em GIF com legenda |
-| `gols.js` | Lê o título do post do r/soccer, acha o jogo na agenda e monta a legenda |
+| `gols.js` | Lê o título do post do r/soccer ou r/futebol, acha o jogo na agenda e monta a legenda |
 | `telegram.js` | Manda as imagens da agenda pro Telegram |
 | `goalszone.js` | Busca automática dos gols no goals.zone |
+| `rfutebol.js` | Busca automática dos gols no r/futebol (etiqueta Lances) |
 | `gif.js` | Baixa o vídeo do link e converte em GIF (ffmpeg) |
 | `avisos.js` | Avisos de início de jogo |
 | `canais.js` | Link de cada canal de transmissão |

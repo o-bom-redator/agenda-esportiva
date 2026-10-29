@@ -9,9 +9,26 @@ import ffmpeg from 'ffmpeg-static';
 const rodar = promisify(execFile);
 const LIMITE = 50 * 1024 * 1024; // 50 MB
 
+// Vídeo do próprio Reddit (v.redd.it): a lista de qualidades (DASH) aponta os .mp4 só de imagem.
+// Pega o maior até 720p (o som não importa, o GIF é mudo).
+export const CABECALHO = { 'User-Agent': 'agenda-esportiva-bot/1.0 (+https://github.com/o-bom-redator/agenda-esportiva)' };
+async function videoDoReddit(id) {
+  const res = await fetch(`https://v.redd.it/${id}/DASHPlaylist.mpd`, { headers: CABECALHO });
+  if (!res.ok) throw new Error(`o Reddit respondeu ${res.status} pro vídeo`);
+  const xml = await res.text();
+  const opcoes = [...xml.matchAll(/<Representation[^>]*\bheight="(\d+)"[^>]*>\s*<BaseURL>([^<]+)<\/BaseURL>/g)]
+    .map(([, altura, arquivo]) => ({ altura: Number(altura), arquivo }))
+    .sort((a, b) => b.altura - a.altura);
+  const melhor = opcoes.find((o) => o.altura <= 720) || opcoes.at(-1);
+  if (!melhor) throw new Error('não achei o vídeo no Reddit');
+  return `https://v.redd.it/${id}/${melhor.arquivo}`;
+}
+
 // Acha o endereço do .mp4 dentro da página do vídeo.
 // streama.in e streamain.com mostram o vídeo numa página "embed" separada: segue até ela.
 export async function acharVideo(link, tentativas = 2) {
+  const reddit = link.match(/v\.redd\.it\/(\w+)/);
+  if (reddit) return videoDoReddit(reddit[1]);
   if (/\.(mp4|webm|mov)(\?|$)/i.test(link)) return link;
   const sa = link.match(/streama(?:in\.com|\.in)\/(?:\w{2}\/)?([A-Za-z0-9]+)\/watch/);
   const pagina = sa ? `https://streamain.com/embed/${sa[1]}` : link;
@@ -35,7 +52,7 @@ export async function fazerGif(link) {
   const pasta = fs.mkdtempSync(path.join(os.tmpdir(), 'gol-'));
   const video = path.join(pasta, 'original.mp4');
 
-  const res = await fetch(await acharVideo(link));
+  const res = await fetch(await acharVideo(link), { headers: CABECALHO });
   if (!res.ok) throw new Error(`o vídeo respondeu ${res.status}`);
   const bytes = Buffer.from(await res.arrayBuffer());
   if (bytes.length > LIMITE) throw new Error('vídeo grande demais (mais de 50 MB)');

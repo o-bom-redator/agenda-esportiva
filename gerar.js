@@ -46,7 +46,7 @@ try {
 
   // Imagens no Telegram (no GitHub, quando os segredos do bot existem)
   if (telegramLigado()) {
-    await enviarAgenda(imagens, data, jogos.length, config.pagina)
+    await enviarAgenda(imagens, data, jogos.length, config.pagina, config.telegram?.grupo)
       .then(() => log('Imagens enviadas no Telegram.'))
       .catch((e) => log('Telegram:', e.message)); // falha aqui não derruba a agenda
   }

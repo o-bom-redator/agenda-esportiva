@@ -12,6 +12,7 @@ import { lerTitulo, acharJogo, jogosDeAgora, montarLegenda } from './gols.js';
 import { fazerGif } from './gif.js';
 import { iniciarAvisos, inicio } from './avisos.js';
 import { iniciarGols } from './goalszone.js';
+import { iniciarLances } from './rfutebol.js';
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 const config = JSON.parse(fs.readFileSync(path.join(DIR, 'config.json'), 'utf8'));
@@ -27,6 +28,13 @@ if (!TOKEN) {
 let dono = process.env.TELEGRAM_CHAT_ID;
 
 const API = `https://api.telegram.org/bot${TOKEN}`;
+
+// Grupo do Telegram que recebe os avisos e gols (você manda /grupo lá dentro).
+// Sem grupo, vai tudo pro seu privado.
+const ARQ_GRUPO = path.join(DIR, 'estado', 'grupo.json');
+let grupo = process.env.TELEGRAM_GRUPO || config.telegram?.grupo || '';
+try { grupo = JSON.parse(fs.readFileSync(ARQ_GRUPO, 'utf8')).id || grupo; } catch {}
+const destino = () => grupo || dono;
 
 // No GitHub Actions o bot roda em turnos (cada execução dura no máximo 6 h).
 // PARAR_AS = horas UTC em que um turno acaba e o próximo começa, ex. "11,17,23".
@@ -69,7 +77,9 @@ https://streamin.link/v/57b4f2a6
 
 Se mandar só o link, eu faço o GIF e peço o título depois.
 
-Também te aviso ${config.avisos?.minutosAntes ?? 15} minutos antes dos jogos principais, com o link de onde assistir. /avisos mostra os próximos.`;
+Também te aviso ${config.avisos?.minutosAntes ?? 15} minutos antes dos jogos principais, com o link de onde assistir. /avisos mostra os próximos.
+
+Pra receber avisos e gols num grupo: me adicione no grupo e mande /grupo lá (/privado volta pra cá).`;
 
 // Vídeo que chegou sem título: espera a próxima mensagem com o título.
 let pendente = null;
@@ -120,19 +130,26 @@ async function salvarDono(chat) {
   fs.writeFileSync(ENV, `${atual.replace(/^TELEGRAM_CHAT_ID=.*\n?/m, '').trimEnd()}\nTELEGRAM_CHAT_ID=${dono}\n`);
 }
 
-// Gol achado automaticamente no goals.zone: tenta os links de vídeo em ordem e manda o GIF
+// Gols já enviados (jogo + placar), pra o mesmo gol não chegar duas vezes
+// quando aparece no goals.zone e no r/futebol, ou em mais de um vídeo.
+const ARQ_ENVIADOS = path.join(DIR, 'estado', 'gols-enviados.json');
+let golsEnviados = [];
+try { golsEnviados = JSON.parse(fs.readFileSync(ARQ_ENVIADOS, 'utf8')); } catch {}
+
+// Gol achado automaticamente: tenta os links de vídeo em ordem e manda o GIF
 async function enviarGol(titulo, links) {
-  // vídeos hospedados no próprio Reddit (v.redd.it) são bloqueados pra robôs: manda só a legenda
-  const fora = links.filter((l) => !/(^|\/\/)(v\.)?redd\.?it/i.test(l));
-  if (!fora.length) {
-    const lance = lerTitulo(titulo);
-    const jogo = lance && acharJogo(lance, await jogosDeAgora().catch(() => []));
-    return responder(dono, `${lance ? montarLegenda(lance, jogo) : `⚽ ${titulo}`}\n\n(sem vídeo: o clipe está hospedado no Reddit)`);
-  }
+  const lance = lerTitulo(titulo);
+  const jogo = lance && acharJogo(lance, await jogosDeAgora().catch(() => []));
+  const chave = jogo ? `${jogo.data} ${jogo.mandante} x ${jogo.visitante} ${lance.placar.join('-')}` : titulo;
+  if (golsEnviados.includes(chave)) return log('Gol repetido, não mandei de novo:', titulo);
   let erro = new Error('post sem link de vídeo');
-  for (const link of fora) {
+  for (const link of links) {
     try {
-      return await entregar(dono, titulo, await fazerGif(link));
+      await entregar(destino(), titulo, await fazerGif(link));
+      golsEnviados = [...golsEnviados, chave].slice(-500);
+      fs.mkdirSync(path.dirname(ARQ_ENVIADOS), { recursive: true });
+      fs.writeFileSync(ARQ_ENVIADOS, JSON.stringify(golsEnviados));
+      return;
     } catch (e) {
       erro = e;
     }
@@ -143,14 +160,11 @@ async function enviarGol(titulo, links) {
 // Avisos de início de jogo e gols automáticos (vão pro dono; você copia pro canal)
 let proximos = () => [];
 function ligarAutomaticos() {
-  proximos = iniciarAvisos(config, (texto) => responder(dono, texto), log, path.join(DIR, 'estado', 'avisados.json'));
+  proximos = iniciarAvisos(config, (texto) => responder(destino(), texto), log, path.join(DIR, 'estado', 'avisados.json'));
   if (config.gols?.automatico !== false) {
-    iniciarGols({
-      arquivo: path.join(DIR, 'estado', 'gols.json'),
-      campeonatos: config.gols?.campeonatos ?? config.avisos?.campeonatos ?? [],
-      entregar: enviarGol,
-      log,
-    });
+    const campeonatos = config.gols?.campeonatos ?? config.avisos?.campeonatos ?? [];
+    iniciarGols({ arquivo: path.join(DIR, 'estado', 'gols.json'), campeonatos, entregar: enviarGol, log });
+    iniciarLances({ arquivo: path.join(DIR, 'estado', 'rfutebol.json'), campeonatos, entregar: enviarGol, log });
   }
 }
 if (dono) ligarAutomaticos();
@@ -176,6 +190,23 @@ while (Date.now() < PARAR) {
       const msg = u.message;
       if (!msg?.text) continue;
       const chat = msg.chat.id;
+      const noGrupo = msg.chat.type !== 'private';
+      if (noGrupo) {
+        // No grupo, só obedece ao dono: /grupo passa a mandar tudo pra lá, /privado volta pro seu chat
+        if (String(msg.from?.id) !== dono) continue;
+        if (/^\/grupo\b/.test(msg.text)) {
+          grupo = String(chat);
+          fs.mkdirSync(path.dirname(ARQ_GRUPO), { recursive: true });
+          fs.writeFileSync(ARQ_GRUPO, JSON.stringify({ id: grupo, nome: msg.chat.title }));
+          log('Grupo salvo:', grupo, msg.chat.title);
+          await responder(chat, `✅ Pronto! Avisos e gols agora vêm pra este grupo.\n(id do grupo: ${grupo})`);
+        } else if (/^\/privado\b/.test(msg.text)) {
+          grupo = '';
+          fs.rmSync(ARQ_GRUPO, { force: true });
+          await responder(chat, '👌 Voltei a mandar tudo no seu privado.');
+        }
+        continue;
+      }
       if (!dono && msg.text.startsWith('/start')) {
         await salvarDono(chat);
         log('Dono do bot salvo:', chat);

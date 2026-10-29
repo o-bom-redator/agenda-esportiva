@@ -5,23 +5,33 @@
 //   🏆 Campeonato Italiano | 9ª Rodada
 import { buscarTodos, VIRADA } from './scraper.js';
 
-// "Time A 1-[2] Time B - Jogador 62'" (o placar entre colchetes é de quem marcou)
-const TITULO = /^(.+?)\s+(\[?\d+\]?)\s*[-–]\s*(\[?\d+\]?)\s+(.+?)\s+[-–]\s+(.+)$/;
+// O placar entre colchetes é de quem marcou. Formatos aceitos:
+//   r/soccer:  "Time A 1-[2] Time B - Jogador 62'"
+//   r/futebol: "Time A 2 x [2] Time B | 50' Jogador"
+//              "Jogador (10') | Time A [2] x 0 Time B | 🏆 Brasileirão Série A – 33ª rodada"
+//              "Time A [2] x 0 Time B - Jogador 51' - Brasileirão, Rodada 33"
+const PLACAR = /^(.+?)\s+(\[?\d+\]?)\s*(?:x|[-–])\s*(\[?\d+\]?)\s+(.+)$/i;
+// Separa os pedaços do título em " | " e " - " (mas não o "-" do placar, como em "0 - [1]")
+const PEDACOS = /\s+\|\s+|\s+[-–]\s+(?![[(]?\d)/;
+// Pedaço que só diz o campeonato/rodada
+const CAMPEONATO = /🏆|rodada|round|matchday|brasileir|campeonato|copa|liga|league|libertadores|s[ée]rie [ab]/i;
 
-// Detalhes do lance que o r/soccer escreve em inglês
+// Detalhes do lance (o r/soccer escreve em inglês, o r/futebol em português)
 const LANCES = [
-  [/\b(own goal|og)\b/i, 'gol contra'],
-  [/\b(penalty|pen)\b/i, 'pênalti'],
+  [/\b(own goal|og|gol contra)\b/i, 'gol contra'],
+  [/\b(penalty|pen|p[eê]nalti)\b/i, 'pênalti'],
   [/\bhat[\s-]?trick\b/i, 'hat-trick'],
   [/\bbrace\b/i, '2º gol'],
-  [/\bfree[\s-]?kick\b/i, 'falta'],
-  [/\b(great|amazing|incredible|stunning|wonder) (goal|strike)\b/i, 'golaço'],
+  [/\bfree[\s-]?kick\b|\bde falta\b/i, 'falta'],
+  [/\b(great|amazing|incredible|stunning|wonder) (goal|strike)\b|golaço/i, 'golaço'],
 ];
 
 export function lerTitulo(titulo) {
-  const m = titulo.replace(/\s+/g, ' ').trim().match(TITULO);
-  if (!m) return null;
-  const [, mandante, p1, p2, visitante, resto] = m;
+  const pedacos = titulo.replace(/\s+/g, ' ').trim().split(PEDACOS);
+  const i = pedacos.findIndex((p) => PLACAR.test(p) && p.includes('['));
+  if (i < 0) return null;
+  const [, mandante, p1, p2, visitante] = pedacos[i].match(PLACAR);
+  const resto = pedacos.filter((p, n) => n !== i && !CAMPEONATO.test(p)).join(' ');
   // 86' | 45+2' | 90'+4'
   const MINUTO = /(\d+)'?(?:\s*\+\s*(\d+))?\s*'/g;
   const ultimo = [...resto.matchAll(MINUTO)].at(-1);
