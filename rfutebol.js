@@ -10,6 +10,7 @@ import { CABECALHO } from './gif.js';
 export const FEED = 'https://www.reddit.com/r/futebol/new/.rss';
 const INTERVALO = 2 * 60_000;
 const RECENTES = 3 * 3_600_000; // posts das últimas 3 h
+const TENTAR = 15 * 60_000; // se o vídeo falhar (ainda processando), tenta de novo enquanto o post tiver menos de 15 min
 
 const desfazer = (t) => t.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
 
@@ -57,7 +58,9 @@ export function iniciarLances({ arquivo, campeonatos = [], entregar, log = conso
         try {
           await entregar(p.titulo, [p.link]);
         } catch (e) {
-          log('r/futebol: falha em', p.titulo, '-', e.message);
+          const deNovo = Date.now() - p.publicado < TENTAR;
+          if (deNovo) estado.vistos.delete(p.id);
+          log('r/futebol: falha em', p.titulo, '-', e.message, deNovo ? '(vou tentar de novo)' : '');
         }
       }
       if (primeira) log('r/futebol: primeira leitura feita, os próximos gols serão enviados.');

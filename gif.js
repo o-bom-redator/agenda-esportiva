@@ -47,19 +47,17 @@ export async function acharVideo(link, tentativas = 2) {
   throw new Error('não achei o vídeo nessa página');
 }
 
-// Gera animacao.mp4 numa pasta temporária: sem som, até 720px (o Telegram mostra como GIF)
+// Gera animacao.mp4 numa pasta temporária: sem som, até 720px (o Telegram mostra como GIF).
+// O ffmpeg lê o vídeo direto do link (o original pode ter mais de 50 MB; o limite vale pro GIF pronto).
 export async function fazerGif(link) {
   const pasta = fs.mkdtempSync(path.join(os.tmpdir(), 'gol-'));
-  const video = path.join(pasta, 'original.mp4');
-
-  const res = await fetch(await acharVideo(link), { headers: CABECALHO });
-  if (!res.ok) throw new Error(`o vídeo respondeu ${res.status}`);
-  const bytes = Buffer.from(await res.arrayBuffer());
-  if (bytes.length > LIMITE) throw new Error('vídeo grande demais (mais de 50 MB)');
-  fs.writeFileSync(video, bytes);
-
+  const video = await acharVideo(link);
   const animacao = path.join(pasta, 'animacao.mp4');
-  await rodar(ffmpeg, ['-y', '-v', 'error', '-i', video, '-an', '-vf', "fps=30,scale='min(720,iw)':-2",
-    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '26', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', animacao]);
-  return { pasta, animacao };
+  for (const [largura, crf] of [[720, 26], [480, 30]]) {
+    await rodar(ffmpeg, ['-y', '-v', 'error', '-user_agent', CABECALHO['User-Agent'], '-i', video, '-an',
+      '-vf', `fps=30,scale='min(${largura},iw)':-2`, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', String(crf),
+      '-pix_fmt', 'yuv420p', '-movflags', '+faststart', animacao], { timeout: 5 * 60_000 });
+    if (fs.statSync(animacao).size <= LIMITE) return { pasta, animacao };
+  }
+  throw new Error('GIF grande demais (mais de 50 MB)');
 }

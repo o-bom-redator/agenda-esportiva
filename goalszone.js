@@ -9,6 +9,7 @@ const API = 'https://gogz.meneses.pt/api';
 const INTERVALO = 60_000;
 const RECENTES = 4 * 3_600_000; // só olha jogos que começaram nas últimas 4 h
 const ESPERA = 20 * 60_000; // o placar costuma mudar antes do clipe sair: espera o vídeo até 20 min
+const TENTAR = 15 * 60_000; // logo que o gol é postado o vídeo ainda pode estar processando: tenta de novo por 15 min
 const CABECALHO = { 'User-Agent': 'agenda-esportiva-bot (+https://github.com/o-bom-redator/agenda-esportiva)' };
 
 async function api(caminho) {
@@ -42,6 +43,7 @@ export function iniciarGols({ arquivo, campeonatos = [], entregar, log = console
   let primeira = estado.novo; // na primeira vez, só anota o que já existe (não manda gol antigo)
   let rodando = false;
   const esperando = new Map(); // jogo → desde quando falta clipe de algum gol
+  const falhas = new Map(); // vídeo → quando falhou a primeira vez
 
   async function verificar() {
     if (rodando) return; // ainda processando a rodada anterior
@@ -62,6 +64,7 @@ export function iniciarGols({ arquivo, campeonatos = [], entregar, log = console
         const detalhe = await api(`/matches/${m.slug}`);
         const gols = m.score.split(':').reduce((t, n) => t + (Number(n) || 0), 0);
         const comVideo = (detalhe.videos || []).filter((v) => lerTitulo(v.title)).length;
+        let tentarDeNovo = false;
         for (const v of detalhe.videos || []) {
           if (estado.enviados.has(v.simple_permalink)) continue;
           estado.enviados.add(v.simple_permalink);
@@ -69,13 +72,23 @@ export function iniciarGols({ arquivo, campeonatos = [], entregar, log = console
           const links = (v.mirrors || []).map((x) => x.url);
           try {
             await entregar(v.title, links);
+            falhas.delete(v.simple_permalink);
           } catch (e) {
-            log('Gols: falha em', v.title, '-', e.message);
+            const primeiraFalha = falhas.get(v.simple_permalink) ?? Date.now();
+            if (Date.now() - primeiraFalha < TENTAR) {
+              if (!falhas.has(v.simple_permalink)) log('Gols: falha em', v.title, '-', e.message, '(vou tentar de novo)');
+              falhas.set(v.simple_permalink, primeiraFalha);
+              estado.enviados.delete(v.simple_permalink);
+              tentarDeNovo = true;
+            } else {
+              log('Gols: desisti de', v.title, '-', e.message);
+              falhas.delete(v.simple_permalink);
+            }
           }
         }
-        // Falta clipe de algum gol: olha esse jogo de novo no próximo minuto (até ESPERA)
+        // Falta clipe de algum gol (ou um falhou): olha esse jogo de novo no próximo minuto
         const desde = esperando.get(m.slug) ?? Date.now();
-        if (comVideo < gols && Date.now() - desde < ESPERA) {
+        if (tentarDeNovo || (comVideo < gols && Date.now() - desde < ESPERA)) {
           esperando.set(m.slug, desde);
         } else {
           esperando.delete(m.slug);
