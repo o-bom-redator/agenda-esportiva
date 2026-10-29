@@ -20,7 +20,7 @@ function horarios(jogo) {
 
 const titulo = (j) => `${ESPORTES[j.esporte].icone} ${j.mandante} x ${j.visitante}`;
 const detalhes = (j) =>
-  `${j.campeonato}${j.rodada ? ` · ${j.rodada}` : ''}\nOnde assistir: ${separarCanais(j.transmissao).join(', ')}\n\nAgenda do dia: futnatv.net`;
+  `${j.campeonato}${j.rodada ? ` · ${j.rodada}` : ''}\nOnde assistir: ${separarCanais(j.transmissao).join(', ')}`;
 
 export function linkGoogleAgenda(jogo, data) {
   const [inicio, fim] = horarios(jogo);
@@ -129,7 +129,6 @@ export function gerarPagina(jogos, data) {
   .salvar { font-size: 14px; font-weight: 800; text-decoration: none; color: #fff; background: #1a73e8; padding: 8px 14px; border-radius: 10px; white-space: nowrap; }
   .salvar:active { transform: scale(.97); }
   .vazio { text-align: center; color: var(--suave); padding: 40px 0; }
-  footer { text-align: center; font-size: 13px; color: var(--suave); padding: 0 16px 32px; }
   [hidden] { display: none !important; }
 </style>
 </head><body>
@@ -141,7 +140,6 @@ export function gerarPagina(jogos, data) {
 </div></header>
 ${filtros}
 <main class="wrap">${cards || '<p class="vazio">Nenhum jogo com transmissão encontrado.</p>'}</main>
-<footer>Fonte: futnatv.net</footer>
 <script>
   document.querySelectorAll('.filtros button').forEach((b) => b.addEventListener('click', () => {
     document.querySelectorAll('.filtros button').forEach((x) => x.classList.toggle('ativo', x === b));

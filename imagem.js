@@ -104,7 +104,7 @@ function html(jogos, data, pagina, totalPaginas, totalJogos, esportesPresentes) 
   </header>
   <div class="cols"><div>Hora</div><div>Campeonato</div><div>Jogo</div><div style="text-align:right">Onde assistir</div></div>
   <div class="lista">${linhas(jogos, data)}</div>
-  <footer><span>Horários de Brasília · Fonte: futnatv.net</span><span>${totalPaginas > 1 ? `Parte ${pagina} de ${totalPaginas}` : ''}</span></footer>
+  <footer><span>Horários de Brasília</span><span>${totalPaginas > 1 ? `Parte ${pagina} de ${totalPaginas}` : ''}</span></footer>
   </div></body></html>`;
 }
 

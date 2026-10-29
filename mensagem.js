@@ -42,5 +42,5 @@ export function montarMensagem(jogos, data) {
     return `${ESPORTES[j.esporte].icone} *${j.horario}*${dia ? ` _(madrugada, ${dia})_` : ''} | ${j.mandante} x ${j.visitante}\n🏆 ${camp}\n📺 ${j.transmissao || 'A definir'}`;
   });
 
-  return `${cabecalho}\n\n${blocos.join('\n\n')}\n\n_Fonte: futnatv.net_`;
+  return `${cabecalho}\n\n${blocos.join('\n\n')}`;
 }
