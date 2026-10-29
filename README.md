@@ -1,6 +1,6 @@
 # 📅 Agenda esportiva do dia
 
-Gera, todo dia às **5h (Brasília)**, a agenda de jogos transmitidos na TV e no streaming, com dados do [futnatv.net](https://futnatv.net): **futebol, basquete, vôlei e NFL**.
+Gera, todo dia **de manhã cedo (a partir das 4h17, Brasília)**, a agenda de jogos transmitidos na TV e no streaming, com dados do [futnatv.net](https://futnatv.net): **futebol, basquete, vôlei e NFL**.
 
 São dois formatos:
 
@@ -17,7 +17,7 @@ São dois formatos:
 ## Como funciona
 
 ```
-GitHub Actions (todo dia às 5h)
+GitHub Actions (todo dia a partir das 4h17, com horários de reserva até 7h47)
    │
    ├─ scraper.js  → busca os jogos do dia na API do futnatv (por esporte e data)
    ├─ mensagem.js → aplica filtros (sem categorias de base) e monta a versão em texto
@@ -99,7 +99,7 @@ No modo manual, se mandar só o link, ele faz o GIF e pede o título em seguida.
 
 ### Onde o bot roda
 
-No **GitHub Actions** (workflow `bot.yml`), em turnos de 6 h: **das 8h às 2h** (Brasília). Das 2h às 8h ele fica desligado. Mensagens mandadas nesse intervalo são respondidas quando o turno das 8h começa.
+No **GitHub Actions** (workflow `bot.yml`), **o dia todo**, em turnos de até 6 h que acabam às 2h, 8h, 14h e 20h (Brasília). O workflow é agendado de hora em hora: com o bot já ligado, a próxima execução espera na fila e assume quando o turno atual acaba. São vários agendamentos porque o GitHub não garante o horário: em hora cheia ele atrasa horas ou pula.
 
 Pra mudar os horários, edite o `cron` e o `PARAR_AS` no `.github/workflows/bot.yml`. Quando tiver um servidor próprio, o bot roda direto lá com `node bot.js`, sem turnos.
 

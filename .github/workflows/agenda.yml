@@ -1,11 +1,14 @@
-# Todo dia às 5h (Brasília) gera as imagens da agenda e publica numa release do dia.
+# Todo dia de manhã cedo (a partir das 4h17, Brasília) gera as imagens da agenda e publica numa release do dia.
 # A release aparece em github.com/<usuario>/<repo>/releases e o GitHub avisa por e-mail/app.
 # Também publica a página com os links "Salvar no Google Agenda" (se o GitHub Pages estiver ligado).
 name: Agenda do dia
 
 on:
   schedule:
-    - cron: '0 8 * * *' # 8h UTC = 5h em Brasília (o GitHub pode atrasar alguns minutos)
+    # O agendamento do GitHub não é garantido: em hora cheia ele atrasa horas ou pula.
+    # Por isso há vários horários de reserva (4h17 às 7h47 em Brasília) fora da hora cheia;
+    # o primeiro que rodar gera a agenda e os outros veem que ela já existe e param.
+    - cron: '17,47 7-10 * * *'
   workflow_dispatch:
     inputs:
       data:
@@ -18,7 +21,27 @@ permissions:
   id-token: write
 
 jobs:
+  # Nos horários de reserva, só segue se a agenda de hoje ainda não saiu (a release do dia existe)
+  checar:
+    runs-on: ubuntu-latest
+    outputs:
+      rodar: ${{ steps.c.outputs.rodar }}
+    steps:
+      - id: c
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="agenda-$(TZ=America/Sao_Paulo date +%F)"
+          if [ "${{ github.event_name }}" = schedule ] && gh release view "$TAG" -R "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "Agenda de hoje já publicada ($TAG)."
+            echo "rodar=nao" >> "$GITHUB_OUTPUT"
+          else
+            echo "rodar=sim" >> "$GITHUB_OUTPUT"
+          fi
+
   agenda:
+    needs: checar
+    if: needs.checar.outputs.rodar == 'sim'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     outputs:

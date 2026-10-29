@@ -1,11 +1,13 @@
 name: Bot de gols e avisos
 
-# O bot fica ligado em turnos de 6 h, das 8h às 2h (Brasília):
-#   8h–14h, 14h–20h e 20h–2h. Das 2h às 8h fica desligado; as mensagens
-#   que você mandar nesse intervalo são respondidas quando o turno das 8h começa.
+# O bot fica ligado o dia todo, em turnos de até 6 h (limite do GitHub) que acabam
+# às 2h, 8h, 14h e 20h (Brasília). O turno seguinte já está na fila e assume na hora.
 on:
   schedule:
-    - cron: '0 11,17,23 * * *' # 8h, 14h e 20h em Brasília
+    # De hora em hora, fora da hora cheia: o agendamento do GitHub atrasa ou pula execuções.
+    # Com o bot já ligado, a nova execução fica na fila e assume quando o turno atual acaba,
+    # então sempre tem um bot rodando (sem buraco de madrugada).
+    - cron: '17 * * * *'
   workflow_dispatch:
 
 # Só um bot por vez: se um turno atrasar, o próximo espera ele terminar.
