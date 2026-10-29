@@ -1,12 +1,13 @@
-// Busca automática dos gols postados no r/futebol com a etiqueta "Lances" (pega bem o Brasileirão,
-// que quase não aparece no r/soccer). Lê o feed RSS público da busca a cada 2 min (1 consulta).
-// Só manda os posts que são de gol (placar com colchetes) de jogos da nossa agenda.
+// Busca automática dos gols postados no r/futebol (pega bem o Brasileirão, que quase não aparece
+// no r/soccer). Lê o feed RSS público dos posts novos a cada 2 min (1 consulta). A busca pela
+// etiqueta "Lances" atrasa vários minutos, então filtramos pelo título: só passam posts de gol
+// (placar com colchetes, ex. "Bahia [3] x 2 São Paulo") de jogos da nossa agenda.
 import fs from 'node:fs';
 import path from 'node:path';
 import { lerTitulo, acharJogo, jogosDeAgora } from './gols.js';
 import { CABECALHO } from './gif.js';
 
-const FEED = 'https://www.reddit.com/r/futebol/search.rss?q=flair%3ALances&restrict_sr=1&sort=new';
+export const FEED = 'https://www.reddit.com/r/futebol/new/.rss';
 const INTERVALO = 2 * 60_000;
 const RECENTES = 3 * 3_600_000; // posts das últimas 3 h
 

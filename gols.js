@@ -28,12 +28,15 @@ const LANCES = [
 
 export function lerTitulo(titulo) {
   const pedacos = titulo.replace(/\s+/g, ' ').trim().split(PEDACOS);
-  const i = pedacos.findIndex((p) => PLACAR.test(p) && p.includes('['));
+  // o colchete tem que estar no placar (não vale "[Post-Match Thread] ... Bahia 3 x 2 São Paulo")
+  const i = pedacos.findIndex((p) => `${p.match(PLACAR)?.[2]}${p.match(PLACAR)?.[3]}`.includes('['));
   if (i < 0) return null;
   const [, mandante, p1, p2, visitante] = pedacos[i].match(PLACAR);
-  const resto = pedacos.filter((p, n) => n !== i && !CAMPEONATO.test(p)).join(' ');
-  // 86' | 45+2' | 90'+4'
+  let resto = pedacos.filter((p, n) => n !== i && !CAMPEONATO.test(p)).join(' ');
+  // 86' | 45+2' | 90'+4' | 35’2T (= 80')
   const MINUTO = /(\d+)'?(?:\s*\+\s*(\d+))?\s*'/g;
+  resto = resto.replace(/[’‘´]/g, "'")
+    .replace(/(\d+)\s*'?\s*\/?\s*([12])\s*T\b/gi, (_, n, t) => `${t === '2' && Number(n) <= 45 ? Number(n) + 45 : n}'`);
   const ultimo = [...resto.matchAll(MINUTO)].at(-1);
   const minuto = ultimo ? `${ultimo[1]}${ultimo[2] ? `+${ultimo[2]}` : ''}'` : '';
   const lances = LANCES.filter(([re]) => re.test(resto)).map(([, nome]) => nome);

@@ -65,7 +65,7 @@ O bot manda os gols dos jogos do dia em GIF, com legenda pronta pro canal, de do
 O bot olha duas fontes. Quando sai um gol num jogo da agenda do dia, ele baixa o vídeo, faz o GIF e te manda. Você não precisa fazer nada.
 
 - **[goals.zone](https://goals.zone)**, a cada minuto: junta os clipes de gol do r/soccer (forte no futebol europeu).
-- **[r/futebol](https://www.reddit.com/r/futebol/)**, a cada 2 minutos: posts com a etiqueta **Lances** (forte no Brasileirão). Só entram os posts de gol, com o placar entre colchetes (ex.: `Bahia 2 x [2] São Paulo | 50' Bobadilla`). Polêmicas e defesas ficam de fora.
+- **[r/futebol](https://www.reddit.com/r/futebol/)**, a cada 2 minutos: posts novos (forte no Brasileirão; a busca pela etiqueta Lances atrasa, por isso lemos os novos). Só entram os posts de gol, com o placar entre colchetes (ex.: `Bahia 2 x [2] São Paulo | 50' Bobadilla`). Polêmicas e defesas ficam de fora.
 - **Sem repetir:** o mesmo gol (jogo + placar) só chega uma vez, mesmo que apareça nas duas fontes ou em vários vídeos.
 - **Quais jogos:** só os campeonatos de `avisos.campeonatos` no `config.json`. Pra usar uma lista diferente da dos avisos, crie `gols.campeonatos`. Pra desligar, use `"gols": { "automatico": false }`.
 - **Uso educado:** o bot faz poucas consultas e se identifica. Os termos do goals.zone não permitem republicar o conteúdo deles. Se alguma fonte bloquear o acesso, a outra e o modo manual continuam funcionando.
