@@ -79,6 +79,8 @@ Se mandar só o link, eu faço o GIF e peço o título depois.
 
 Também te aviso ${config.avisos?.minutosAntes ?? 15} minutos antes dos jogos principais, com o link de onde assistir. /avisos mostra os próximos.
 
+/status mostra se as fontes de gols estão funcionando.
+
 Pra receber avisos e gols num grupo: me adicione no grupo e mande /grupo lá (/privado volta pra cá).`;
 
 // Vídeo que chegou sem título: espera a próxima mensagem com o título.
@@ -157,14 +159,20 @@ async function enviarGol(titulo, links) {
   throw erro;
 }
 
-// Avisos de início de jogo e gols automáticos (vão pro dono; você copia pro canal)
+// Avisos de início de jogo e gols automáticos (vão pro grupo ou pro dono; você copia pro canal)
 let proximos = () => [];
+// Última notícia de cada fonte de gols, pro /status
+const fontes = new Map();
+const logDa = (fonte) => (...a) => {
+  fontes.set(fonte, `${new Date().toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' })} · ${a.join(' ')}`);
+  log(...a);
+};
 function ligarAutomaticos() {
   proximos = iniciarAvisos(config, (texto) => responder(destino(), texto), log, path.join(DIR, 'estado', 'avisados.json'));
   if (config.gols?.automatico !== false) {
     const campeonatos = config.gols?.campeonatos ?? config.avisos?.campeonatos ?? [];
-    iniciarGols({ arquivo: path.join(DIR, 'estado', 'gols.json'), campeonatos, entregar: enviarGol, log });
-    iniciarLances({ arquivo: path.join(DIR, 'estado', 'rfutebol.json'), campeonatos, entregar: enviarGol, log });
+    iniciarGols({ arquivo: path.join(DIR, 'estado', 'gols.json'), campeonatos, entregar: enviarGol, log: logDa('goals.zone') });
+    iniciarLances({ arquivo: path.join(DIR, 'estado', 'rfutebol.json'), campeonatos, entregar: enviarGol, log: logDa('r/futebol') });
   }
 }
 if (dono) ligarAutomaticos();
@@ -214,6 +222,11 @@ while (Date.now() < PARAR) {
       }
       if (String(chat) !== dono) {
         await responder(chat, 'Este bot é particular.');
+        continue;
+      }
+      if (msg.text.startsWith('/status')) {
+        const linhas = [...fontes].map(([f, t]) => `• ${f}: ${t}`);
+        await responder(chat, `📡 Fontes de gols:\n${linhas.join('\n') || '(ainda lendo)'}\n\n📍 Mandando para: ${grupo ? `grupo ${grupo}` : 'seu privado'}`);
         continue;
       }
       if (msg.text.startsWith('/avisos')) {
