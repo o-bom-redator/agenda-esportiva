@@ -39,5 +39,8 @@
   "gols": {
     "automatico": true
   },
-  "pagina": "https://o-bom-redator.github.io/agenda-esportiva/"
+  "pagina": "https://o-bom-redator.github.io/agenda-esportiva/",
+  "telegram": {
+    "grupo": "-5568331729"
+  }
 }
