@@ -8,6 +8,7 @@ import { lerTitulo, acharJogo, jogosDeAgora } from './gols.js';
 const API = 'https://gogz.meneses.pt/api';
 const INTERVALO = 60_000;
 const RECENTES = 4 * 3_600_000; // só olha jogos que começaram nas últimas 4 h
+const ESPERA = 20 * 60_000; // o placar costuma mudar antes do clipe sair: espera o vídeo até 20 min
 const CABECALHO = { 'User-Agent': 'agenda-esportiva-bot (+https://github.com/o-bom-redator/agenda-esportiva)' };
 
 async function api(caminho) {
@@ -40,6 +41,7 @@ export function iniciarGols({ arquivo, campeonatos = [], entregar, log = console
   const escolhidos = new Set(campeonatos.map((c) => c.toLowerCase()));
   let primeira = estado.novo; // na primeira vez, só anota o que já existe (não manda gol antigo)
   let rodando = false;
+  const esperando = new Map(); // jogo → desde quando falta clipe de algum gol
 
   async function verificar() {
     if (rodando) return; // ainda processando a rodada anterior
@@ -58,6 +60,8 @@ export function iniciarGols({ arquivo, campeonatos = [], entregar, log = console
           continue;
         }
         const detalhe = await api(`/matches/${m.slug}`);
+        const gols = m.score.split(':').reduce((t, n) => t + (Number(n) || 0), 0);
+        const comVideo = (detalhe.videos || []).filter((v) => lerTitulo(v.title)).length;
         for (const v of detalhe.videos || []) {
           if (estado.enviados.has(v.simple_permalink)) continue;
           estado.enviados.add(v.simple_permalink);
@@ -69,7 +73,14 @@ export function iniciarGols({ arquivo, campeonatos = [], entregar, log = console
             log('Gols: falha em', v.title, '-', e.message);
           }
         }
-        estado.placares.set(m.slug, m.score);
+        // Falta clipe de algum gol: olha esse jogo de novo no próximo minuto (até ESPERA)
+        const desde = esperando.get(m.slug) ?? Date.now();
+        if (comVideo < gols && Date.now() - desde < ESPERA) {
+          esperando.set(m.slug, desde);
+        } else {
+          esperando.delete(m.slug);
+          estado.placares.set(m.slug, m.score);
+        }
         salvarEstado(arquivo, estado);
       }
       if (primeira) log('Gols: primeira leitura feita, os próximos gols serão enviados.');
