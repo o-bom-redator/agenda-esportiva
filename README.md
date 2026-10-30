@@ -110,6 +110,8 @@ Pra mudar os horários, edite o `cron` e o `PARAR_AS` no `.github/workflows/bot.
 3. No GitHub, vá em **Settings → Secrets and variables → Actions → New repository secret** e crie dois segredos:
    - `TELEGRAM_TOKEN`: o token do BotFather
    - `TELEGRAM_CHAT_ID`: o seu número de chat
+   - `REDDIT_CLIENT_ID` e `REDDIT_CLIENT_SECRET` (recomendado): chaves de um app "script" criado em
+     https://www.reddit.com/prefs/apps. Sem elas o Reddit bloqueia (403) a leitura vinda do GitHub.
 4. Ligue o primeiro turno em **Actions → Bot de gols e avisos → Run workflow**. Os próximos ligam sozinhos.
 5. No Telegram, abra o seu bot e mande `/start`.
 
@@ -195,6 +197,7 @@ Depois de alterar, faça commit e push pra que o GitHub use a versão nova.
 | `telegram.js` | Manda as imagens da agenda pro Telegram |
 | `goalszone.js` | Busca automática dos gols no goals.zone |
 | `rfutebol.js` | Busca automática dos gols no r/futebol (etiqueta Lances) |
+| `reddit.js` | Acesso oficial ao Reddit (OAuth), usado quando há as chaves `REDDIT_CLIENT_*` |
 | `gif.js` | Baixa o vídeo do link e converte em GIF (ffmpeg) |
 | `avisos.js` | Avisos de início de jogo |
 | `canais.js` | Link de cada canal de transmissão |

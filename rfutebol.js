@@ -6,9 +6,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { lerTitulo, acharJogo, jogosDeAgora } from './gols.js';
 import { CABECALHO } from './gif.js';
+import { temApiOficial, postsNovos } from './reddit.js';
 
 export const FEED = 'https://www.reddit.com/r/futebol/new/.rss';
-const INTERVALO = 2 * 60_000;
+const INTERVALO = temApiOficial ? 30_000 : 2 * 60_000; // a API oficial aguenta consultas mais frequentes
 const RECENTES = 3 * 3_600_000; // posts das últimas 3 h
 const TENTAR = 15 * 60_000; // se o vídeo falhar (ainda processando), tenta de novo enquanto o post tiver menos de 15 min
 
@@ -46,9 +47,15 @@ export function iniciarLances({ arquivo, campeonatos = [], entregar, log = conso
       const todos = await jogosDeAgora().catch(() => []);
       if (!todos.length) return;
       const agenda = todos.filter((j) => !escolhidos.size || escolhidos.has(j.campeonato.toLowerCase()));
-      const res = await fetch(FEED, { headers: CABECALHO });
-      if (!res.ok) throw new Error(`o Reddit respondeu ${res.status}`);
-      const posts = lerFeed(await res.text()).reverse(); // do mais antigo pro mais novo
+      let posts;
+      if (temApiOficial) {
+        posts = await postsNovos('futebol');
+      } else {
+        const res = await fetch(FEED, { headers: CABECALHO });
+        if (!res.ok) throw new Error(`o Reddit respondeu ${res.status}`);
+        posts = lerFeed(await res.text());
+      }
+      posts.reverse(); // do mais antigo pro mais novo
       for (const p of posts) {
         if (estado.vistos.has(p.id)) continue;
         estado.vistos.add(p.id);

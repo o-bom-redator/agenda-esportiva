@@ -27,9 +27,9 @@ async function videoDoReddit(id) {
 // Acha o endereço do .mp4 dentro da página do vídeo.
 // streama.in e streamain.com mostram o vídeo numa página "embed" separada: segue até ela.
 export async function acharVideo(link, tentativas = 2) {
+  if (/\.(mp4|webm|mov|gif)(\?|$)/i.test(link)) return link; // .gif também: o ffmpeg converte
   const reddit = link.match(/v\.redd\.it\/(\w+)/);
   if (reddit) return videoDoReddit(reddit[1]);
-  if (/\.(mp4|webm|mov|gif)(\?|$)/i.test(link)) return link; // .gif também: o ffmpeg converte
   const sa = link.match(/streama(?:in\.com|\.in)\/(?:\w{2}\/)?([A-Za-z0-9]+)\/watch/);
   const pagina = sa ? `https://streamain.com/embed/${sa[1]}` : link;
 

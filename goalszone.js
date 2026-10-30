@@ -4,6 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { lerTitulo, acharJogo, jogosDeAgora } from './gols.js';
+import { temApiOficial, videoDoPost } from './reddit.js';
 
 const API = 'https://gogz.meneses.pt/api';
 const INTERVALO = 60_000;
@@ -70,6 +71,11 @@ export function iniciarGols({ arquivo, campeonatos = [], entregar, log = console
           estado.enviados.add(v.simple_permalink);
           if (primeira || !lerTitulo(v.title)) continue; // gol antigo ou post que não é de gol
           const links = (v.mirrors || []).map((x) => x.url);
+          // Vídeo do próprio Reddit: pega o .mp4 direto pela API oficial (sem ela o GitHub leva 403)
+          if (temApiOficial && links.some((l) => /v\.redd\.it/.test(l))) {
+            const mp4 = await videoDoPost(v.simple_permalink).catch(() => '');
+            if (mp4) links.unshift(mp4);
+          }
           try {
             await entregar(v.title, links);
             falhas.delete(v.simple_permalink);
