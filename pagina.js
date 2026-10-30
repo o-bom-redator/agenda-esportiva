@@ -65,6 +65,12 @@ function chipsComLink(transmissao) {
   return canais.map((c) => `<a class="chip ${tipoCanal(c)}" href="#${slug(emissoraDoFiltro(c))}">${esc(c)}</a>`).join('');
 }
 
+const CALENDARIO = '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4.75 0a.75.75 0 0 1 .75.75V2h5V.75a.75.75 0 0 1 1.5 0V2h1.25c.966 0 1.75.784 1.75 1.75v10.5A1.75 1.75 0 0 1 13.25 16H2.75A1.75 1.75 0 0 1 1 14.25V3.75C1 2.784 1.784 2 2.75 2H4V.75A.75.75 0 0 1 4.75 0ZM2.5 7.5v6.75c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25V7.5Zm10.75-4H2.75a.25.25 0 0 0-.25.25V6h11V3.75a.25.25 0 0 0-.25-.25Z"/></svg>';
+
+// Início do jogo com fuso ("2026-10-30T15:00:00-03:00"), pro selo "Ao vivo" que o navegador liga e desliga
+const inicioIso = (j) => `${j.data}T${j.horario.replace('h', ':').padEnd(5, '0')}:00-03:00`;
+const AO_VIVO = '<span class="aovivo" hidden><span class="pulso"></span>Ao vivo</span>';
+
 // Jogos dos próximos dias, enxutos, pro filtro por emissora (o navegador monta os cards)
 function dadosDaSemana(semana) {
   return semana.flatMap(({ data, jogos }) => jogos.map((j) => ({
@@ -105,14 +111,14 @@ export function gerarPagina(jogos, data, semana = [{ data, jogos }]) {
     return `<section class="bloco">
     <h2 class="hora"><time>${esc(jogo.horario)}</time>${dia ? ` <span class="selo">madrugada · ${esc(dia)}</span>` : ''}</h2>
     <div class="lista">${doHorario.map((j) => `
-      <article class="jogo" data-esporte="${j.esporte}" style="--cor:${CORES[j.esporte]}">
+      <article class="jogo" data-esporte="${j.esporte}" data-inicio="${inicioIso(j)}" data-duracao="${DURACAO[j.esporte]}" style="--cor:${CORES[j.esporte]}">
         <div class="info">
-          <div class="camp"><span class="ponto"></span>${esc(j.campeonato)}${j.rodada ? ` <span>· ${esc(j.rodada)}</span>` : ''}</div>
+          <div class="camp"><span class="ponto"></span>${esc(j.campeonato)}${j.rodada ? ` <span>· ${esc(j.rodada)}</span>` : ''}${AO_VIVO}</div>
           <div class="times">${esc(j.mandante)} <span class="x">×</span> ${esc(j.visitante)}</div>
         </div>
         <div class="acoes">
           <div class="canais">${chipsComLink(j.transmissao)}</div>
-          <a class="botao" href="${esc(linkGoogleAgenda(j, data))}" target="_blank" rel="noopener">Salvar na agenda</a>
+          <a class="botao agenda" href="${esc(linkGoogleAgenda(j, data))}" target="_blank" rel="noopener">${CALENDARIO}Salvar na agenda</a>
         </div>
       </article>`).join('')}
     </div></section>`;
@@ -204,6 +210,22 @@ export function gerarPagina(jogos, data, semana = [{ data, jogos }]) {
     color: var(--texto); background: var(--elevado); border: 1px solid var(--linha); text-decoration: none; white-space: nowrap; transition: border-color .1s; }
   .botao:hover { border-color: var(--linha-forte); }
 
+  /* Botão da agenda: verde (ação principal), não se confunde com os chips de emissora */
+  .botao.agenda { gap: 6px; color: #fff; background: #238636; border-color: rgba(240,246,252,.1); font-weight: 600; }
+  .botao.agenda:hover { background: #2ea043; border-color: rgba(240,246,252,.1); }
+  .acoes .botao.agenda { margin-left: auto; }
+
+  /* Selo "Ao vivo" */
+  .aovivo { display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 8px; border-radius: 9999px; margin-left: 8px;
+    font: 600 11px 'Inter', sans-serif; letter-spacing: .04em; text-transform: uppercase; color: #f85149;
+    background: color-mix(in srgb, #f85149 15%, transparent); }
+  .pulso { width: 7px; height: 7px; border-radius: 50%; background: #f85149; animation: pulso 1.6s ease-in-out infinite; }
+  @keyframes pulso { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+  @media (prefers-reduced-motion: reduce) { .pulso { animation: none; } }
+  .jogo.vivo { box-shadow: inset 2px 0 0 #f85149; }
+  .confronto .hr .aovivo { display: flex; margin: 3px 0 0; justify-content: center; }
+  .confronto .hr .aovivo[hidden] { display: none; }
+
   /* Página de uma emissora */
   .em-topo { padding: 20px 0 0; }
   .em-topo .voltar { font-size: 14px; text-decoration: none; }
@@ -260,6 +282,8 @@ function script(dados, dias) {
   const CORES = ${json(CORES)};
   const DURACAO = ${json(DURACAO)};
   const DIAS = ${dias};
+  const CALENDARIO = ${json(CALENDARIO)};
+  const AO_VIVO = ${json(AO_VIVO)};
   let esporte = '';
 
   const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -304,11 +328,12 @@ function script(dados, dias) {
           + esc(p.c) + '</b>' + (p.r ? '<small>' + esc(p.r) + '</small>' : '') + '</div>';
         for (const j of jogos) {
           const madrugada = j.d !== j.a ? '<small>madrugada</small>' : '';
-          html += '<div class="linha jogo" data-esporte="' + j.e + '"><div class="confronto"><span class="casa">' + esc(j.m) + '</span>'
-            + '<time class="hr">' + esc(j.h) + madrugada + '</time><span class="fora">' + esc(j.v) + '</span></div>'
+          html += '<div class="linha jogo" data-esporte="' + j.e + '" data-inicio="' + j.d + 'T' + j.h.replace('h', ':') + ':00-03:00" data-duracao="' + DURACAO[j.e] + '">'
+            + '<div class="confronto"><span class="casa">' + esc(j.m) + '</span>'
+            + '<time class="hr">' + esc(j.h) + madrugada + AO_VIVO + '</time><span class="fora">' + esc(j.v) + '</span></div>'
             + '<div class="lado"><div class="canais">' + j.t.map((c) => '<a class="chip ' + tipo(c) + (filtro(c) === nome ? ' sel' : '')
               + '" href="#' + slug(filtro(c)) + '">' + esc(c) + '</a>').join('') + '</div>'
-            + '<a class="botao" href="' + esc(linkAgenda(j)) + '" target="_blank" rel="noopener" title="Salvar na agenda">Agenda</a></div></div>';
+            + '<a class="botao agenda" href="' + esc(linkAgenda(j)) + '" target="_blank" rel="noopener" title="Salvar na agenda">' + CALENDARIO + 'Agenda</a></div></div>';
         }
         html += '</div>';
       }
@@ -322,6 +347,19 @@ function script(dados, dias) {
     document.querySelectorAll('.jogo').forEach((j) => { j.hidden = esporte && j.dataset.esporte !== esporte; });
     document.querySelectorAll('.bloco, .grupo, .bloco-dia').forEach((b) => { b.hidden = !b.querySelector('.jogo:not([hidden])'); });
   }
+
+  // "Ao vivo" entre o início e o fim estimado (duração média do esporte); depois some
+  function marcarAoVivo() {
+    const agora = Date.now();
+    document.querySelectorAll('[data-inicio]').forEach((el) => {
+      const ini = Date.parse(el.dataset.inicio);
+      const vivo = agora >= ini && agora < ini + Number(el.dataset.duracao) * 60000;
+      el.classList.toggle('vivo', vivo);
+      const selo = el.querySelector('.aovivo');
+      if (selo) selo.hidden = !vivo;
+    });
+  }
+  setInterval(marcarAoVivo, 30000);
 
   const seletor = document.getElementById('emissora');
   function mostrar() {
@@ -337,6 +375,7 @@ function script(dados, dias) {
       caixa.scrollIntoView({ block: 'start' });
     }
     aplicarEsporte();
+    marcarAoVivo();
   }
 
   document.querySelectorAll('.filtros button').forEach((b) => b.addEventListener('click', () => {
