@@ -2,7 +2,7 @@
 // Também gera site/agenda.ics com todos os jogos (pra iPhone/Outlook).
 import { ESPORTES } from './scraper.js';
 import { formatarData, ehHoje, rotuloDia } from './mensagem.js';
-import { CORES, esc, chips, separarCanais } from './imagem.js';
+import { CORES, esc, separarCanais, tipoCanal } from './imagem.js';
 import { emissoraDoFiltro } from './emissoras.js';
 
 // Duração estimada de cada esporte, em minutos (só pra bloquear o horário na agenda)
@@ -55,6 +55,16 @@ export function gerarIcs(jogos, data) {
   return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//agenda-esportiva//PT-BR', 'CALSCALE:GREGORIAN', ...eventos, 'END:VCALENDAR', ''].join('\r\n');
 }
 
+// "CazéTV (YouTube)" → "cazetv": endereço da emissora na página (.../#cazetv)
+const slug = (nome) => nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+// Chips de "onde assistir": cada um leva aos jogos daquela emissora nos próximos dias
+function chipsComLink(transmissao) {
+  const canais = separarCanais(transmissao || '');
+  if (!canais.length) return '<span class="chip tv">A definir</span>';
+  return canais.map((c) => `<a class="chip ${tipoCanal(c)}" href="#${slug(emissoraDoFiltro(c))}">${esc(c)}</a>`).join('');
+}
+
 // Jogos dos próximos dias, enxutos, pro filtro por emissora (o navegador monta os cards)
 function dadosDaSemana(semana) {
   return semana.flatMap(({ data, jogos }) => jogos.map((j) => ({
@@ -76,12 +86,12 @@ export function gerarPagina(jogos, data, semana = [{ data, jogos }]) {
   const dados = dadosDaSemana(semana);
   const contagem = new Map();
   for (const j of dados) for (const e of new Set(j.t.map(emissoraDoFiltro))) contagem.set(e, (contagem.get(e) || 0) + 1);
-  const opcoes = [...contagem].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR'))
-    .map(([e, n]) => `<option value="${esc(e)}">${esc(e)} (${n})</option>`).join('');
+  const emissoras = [...contagem].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR'));
   const dias = semana.length;
-  const seletor = `<div class="emissora"><label for="emissora">📺 Emissora</label><select id="emissora">
-    <option value="">Todas (só ${ehHoje(data) ? 'hoje' : 'este dia'})</option>${opcoes}</select>
-    <span>mostra os jogos dos próximos ${dias} dias</span></div>`;
+  const seletor = `<div class="emissora"><label for="emissora">📺 Onde assistir</label><select id="emissora">
+    <option value="">Todas as emissoras (${ehHoje(data) ? 'hoje' : 'este dia'})</option>${emissoras
+    .map(([e, n]) => `<option value="${slug(e)}">${esc(e)} (${n})</option>`).join('')}</select>
+    <span>jogos de uma emissora nos próximos ${dias} dias</span></div>`;
 
   let ultimo = '';
   const cards = jogos.map((j) => {
@@ -94,7 +104,7 @@ export function gerarPagina(jogos, data, semana = [{ data, jogos }]) {
       <div class="camp">${ESPORTES[j.esporte].icone} ${esc(j.campeonato)}${j.rodada ? ` <span>· ${esc(j.rodada)}</span>` : ''}</div>
       <div class="times">${esc(j.mandante)} <b>×</b> ${esc(j.visitante)}</div>
       <div class="rodape">
-        <div class="canais">${chips(j.transmissao)}</div>
+        <div class="canais">${chipsComLink(j.transmissao)}</div>
         <a class="salvar" href="${esc(linkGoogleAgenda(j, data))}" target="_blank" rel="noopener">📅 Salvar na agenda</a>
       </div>
     </article>`;
@@ -152,9 +162,37 @@ export function gerarPagina(jogos, data, semana = [{ data, jogos }]) {
   .emissora select { font: inherit; font-size: 15px; font-weight: 700; color: var(--texto); background: var(--card); border: 1px solid var(--linha);
     border-radius: 10px; padding: 7px 10px; max-width: 100%; }
   .emissora span { font-weight: 500; color: var(--suave); font-size: 13px; }
-  .dia { font-size: 15px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #fff; background: #13315c;
-    border-radius: 10px; padding: 8px 12px; margin: 26px 0 0; }
-  .titulo-emissora { font-size: 22px; font-weight: 900; margin: 18px 0 2px; }
+  a.chip { text-decoration: none; }
+  a.chip:hover { filter: brightness(.95); text-decoration: underline; }
+  .chip.sel { outline: 2px solid currentColor; outline-offset: -2px; }
+  /* Página de uma emissora */
+  .em-topo { padding: 18px 0 4px; }
+  .em-topo .voltar { font-size: 14px; font-weight: 700; color: #1a73e8; text-decoration: none; }
+  .em-topo .tipo { font-size: 12px; letter-spacing: 1.5px; font-weight: 700; color: var(--suave); text-transform: uppercase; margin-top: 14px; }
+  .em-topo h2 { font-size: 28px; font-weight: 900; letter-spacing: -.5px; line-height: 1.15; margin-top: 2px; }
+  .em-topo p { font-size: 15px; color: var(--suave); margin-top: 6px; }
+  .em-topo p b { color: var(--texto); }
+  .dia { font-size: 19px; font-weight: 900; margin: 24px 0 8px; }
+  .grupo { background: var(--card); border: 1px solid var(--linha); border-radius: 14px; margin-bottom: 10px; overflow: hidden;
+    box-shadow: 0 1px 2px rgba(16,24,40,.06); }
+  .grupo-topo { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-left: 5px solid var(--cor); }
+  .grupo-topo .icone { font-size: 20px; }
+  .grupo-topo b { display: block; font-size: 15px; font-weight: 800; }
+  .grupo-topo small { display: block; font-size: 12.5px; color: var(--suave); font-weight: 500; }
+  .grupo .jogo { border-left: 0; border-radius: 0; margin: 0; box-shadow: none; background: none; }
+  .linha { display: grid; grid-template-columns: 1fr auto; gap: 8px 14px; align-items: center; padding: 12px 14px; border-top: 1px solid var(--linha); }
+  .confronto { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center; font-weight: 700; font-size: 15px; }
+  .confronto .casa { text-align: right; }
+  .confronto .hr { font-size: 16px; font-weight: 900; font-variant-numeric: tabular-nums; text-align: center; }
+  .confronto .hr small { display: block; font-size: 10.5px; font-weight: 700; color: var(--suave); text-transform: uppercase; letter-spacing: .5px; }
+  .linha .lado { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+  .linha .canais { justify-content: flex-end; }
+  .linha .agendar { text-decoration: none; font-size: 18px; line-height: 1; padding: 6px; border-radius: 8px; background: var(--fundo); }
+  @media (max-width: 560px) {
+    .linha { grid-template-columns: 1fr; }
+    .linha .lado { justify-content: center; }
+    .linha .canais { justify-content: center; }
+  }
   [hidden] { display: none !important; }
 </style>
 </head><body>
@@ -168,52 +206,77 @@ ${filtros}
 ${seletor}
 <main class="wrap" id="dia">${cards || '<p class="vazio">Nenhum jogo com transmissão encontrado.</p>'}</main>
 <main class="wrap" id="porEmissora" hidden></main>
-<script>
-  const SEMANA = ${JSON.stringify(dados).replace(/</g, '\\u003c')};
-  const ESPORTES = ${JSON.stringify(Object.fromEntries(Object.entries(ESPORTES).map(([k, v]) => [k, v.icone])))};
-  const CORES = ${JSON.stringify(CORES)};
-  const DURACAO = ${JSON.stringify(DURACAO)};
+${script(dados, dias)}
+</body></html>
+`;
+}
+
+// Script da página: filtro por esporte e a "página" de cada emissora (endereço .../#cazetv)
+function script(dados, dias) {
+  const json = (x) => JSON.stringify(x).replace(/</g, '\\u003c');
+  return String.raw`<script>
+  const SEMANA = ${json(dados)};
+  const ESPORTES = ${json(Object.fromEntries(Object.entries(ESPORTES).map(([k, v]) => [k, v.icone])))};
+  const CORES = ${json(CORES)};
+  const DURACAO = ${json(DURACAO)};
+  const DIAS = ${dias};
   let esporte = '';
 
   const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-  const filtro = (c) => c.replace(/\\s*\\(.*\\)\\s*$/, '').trim() || c;
-  const tipo = (c) => /youtube|\\byt\\b|cazé|getv|ge tv/i.test(c) ? 'yt'
-    : /disney|prime|max|globoplay|paramount|netflix|league pass|dazn|apple|star\\+|onefootball|sportynet/i.test(c) ? 'stream' : 'tv';
+  const filtro = (c) => c.replace(/\s*\(.*\)\s*$/, '').trim() || c;
+  const slug = (n) => n.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const tipo = (c) => /youtube|\byt\b|cazé|getv|ge tv/i.test(c) ? 'yt'
+    : /disney|prime|max|globoplay|paramount|netflix|league pass|dazn|apple|star\+|onefootball|sportynet/i.test(c) ? 'stream' : 'tv';
+  const hojeBR = (mais = 0) => new Date(Date.now() + mais * 864e5).toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
   const nomeDia = (d, o) => { const s = new Date(d + 'T12:00:00-03:00').toLocaleDateString('pt-BR', o); return s.charAt(0).toUpperCase() + s.slice(1); };
+  const rotulo = (d) => d === hojeBR() ? 'Hoje' : d === hojeBR(1) ? 'Amanhã' : nomeDia(d, { weekday: 'long', day: '2-digit', month: '2-digit' });
+  const NOMES = {}; // slug → nome da emissora
+  for (const j of SEMANA) for (const c of j.t) NOMES[slug(filtro(c))] = filtro(c);
+
   function linkAgenda(j) {
     const [h, m] = j.h.split('h').map(Number);
     const ini = new Date(j.d + 'T00:00:00Z'); ini.setUTCHours(h, m || 0);
     const fim = new Date(ini.getTime() + DURACAO[j.e] * 60000);
     const fmt = (x) => x.toISOString().replace(/[-:]/g, '').slice(0, 15);
     return 'https://calendar.google.com/calendar/render?' + new URLSearchParams({ action: 'TEMPLATE', text: ESPORTES[j.e] + ' ' + j.m + ' x ' + j.v,
-      dates: fmt(ini) + '/' + fmt(fim), ctz: 'America/Sao_Paulo', details: j.c + (j.r ? ' · ' + j.r : '') + '\\nOnde assistir: ' + j.t.join(', '), location: j.t.join(', ') });
+      dates: fmt(ini) + '/' + fmt(fim), ctz: 'America/Sao_Paulo', details: j.c + (j.r ? ' · ' + j.r : '') + '\nOnde assistir: ' + j.t.join(', '), location: j.t.join(', ') });
   }
 
-  function mostrarEmissora(emissora) {
-    const caixa = document.getElementById('porEmissora');
-    document.getElementById('dia').hidden = !!emissora;
-    caixa.hidden = !emissora;
-    if (!emissora) return;
-    const lista = SEMANA.filter((j) => j.t.some((c) => filtro(c) === emissora));
-    let html = '<h2 class="titulo-emissora">📺 ' + esc(emissora) + '</h2><div class="camp">' + lista.length + ' jogos nos próximos ' + ${dias} + ' dias</div>';
-    let dia = '', hora = '';
-    for (const j of lista) {
-      if (j.a !== dia) { dia = j.a; hora = ''; html += '<h2 class="dia">' + esc(nomeDia(dia, { weekday: 'long', day: '2-digit', month: '2-digit' })) + '</h2>'; }
-      if (j.d + j.h !== hora) {
-        hora = j.d + j.h;
-        html += '<h2 class="hora">' + esc(j.h) + (j.d !== j.a ? ' <span>madrugada · ' + esc(nomeDia(j.d, { weekday: 'short', day: '2-digit', month: '2-digit' }).replace('.', '').toLowerCase()) + '</span>' : '') + '</h2>';
+  // Jogos da emissora nos próximos dias: por dia, e dentro do dia por campeonato
+  function paginaDaEmissora(nome) {
+    const lista = SEMANA.filter((j) => j.t.some((c) => filtro(c) === nome));
+    let html = '<section class="em-topo"><a class="voltar" href="#">← Agenda do dia</a><div class="tipo">Emissora · Brasil</div>'
+      + '<h2>Jogos na ' + esc(nome) + '</h2><p><b>' + lista.length + '</b> ' + (lista.length === 1 ? 'jogo' : 'jogos') + ' na <b>' + esc(nome)
+      + '</b> nos próximos ' + DIAS + ' dias · horários de Brasília</p></section>';
+    if (!lista.length) return html + '<p class="vazio">Nenhum jogo dessa emissora nos próximos dias.</p>';
+    const dias = [...new Set(lista.map((j) => j.a))];
+    for (const dia of dias) {
+      html += '<h3 class="dia">' + esc(rotulo(dia)) + '</h3>';
+      const grupos = new Map();
+      for (const j of lista.filter((x) => x.a === dia)) {
+        const chave = j.e + '|' + j.c;
+        if (!grupos.has(chave)) grupos.set(chave, []);
+        grupos.get(chave).push(j);
       }
-      html += '<article class="jogo" data-esporte="' + j.e + '" style="--cor:' + CORES[j.e] + '">'
-        + '<div class="camp">' + ESPORTES[j.e] + ' ' + esc(j.c) + (j.r ? ' <span>· ' + esc(j.r) + '</span>' : '') + '</div>'
-        + '<div class="times">' + esc(j.m) + ' <b>×</b> ' + esc(j.v) + '</div>'
-        + '<div class="rodape"><div class="canais">' + j.t.map((c) => '<span class="chip ' + tipo(c) + '">' + esc(c) + '</span>').join('') + '</div>'
-        + '<a class="salvar" href="' + esc(linkAgenda(j)) + '" target="_blank" rel="noopener">📅 Salvar na agenda</a></div></article>';
+      for (const jogos of grupos.values()) {
+        const p = jogos[0];
+        html += '<div class="grupo" style="--cor:' + CORES[p.e] + '"><div class="grupo-topo"><span class="icone">' + ESPORTES[p.e] + '</span><div><b>'
+          + esc(p.c) + '</b>' + (p.r ? '<small>' + esc(p.r) + '</small>' : '') + '</div></div>';
+        for (const j of jogos) {
+          const madrugada = j.d !== j.a ? '<small>madrugada</small>' : '';
+          html += '<div class="linha jogo" data-esporte="' + j.e + '"><div class="confronto"><span class="casa">' + esc(j.m) + '</span>'
+            + '<span class="hr">' + esc(j.h) + madrugada + '</span><span class="fora">' + esc(j.v) + '</span></div>'
+            + '<div class="lado"><div class="canais">' + j.t.map((c) => '<a class="chip ' + tipo(c) + (filtro(c) === nome ? ' sel' : '')
+              + '" href="#' + slug(filtro(c)) + '">' + esc(c) + '</a>').join('') + '</div>'
+            + '<a class="agendar" href="' + esc(linkAgenda(j)) + '" target="_blank" rel="noopener" title="Salvar na agenda">📅</a></div></div>';
+        }
+        html += '</div>';
+      }
     }
-    caixa.innerHTML = lista.length ? html : '<p class="vazio">Nenhum jogo dessa emissora nos próximos dias.</p>';
-    aplicarEsporte();
+    return html;
   }
 
-  // Esconde os jogos de outros esportes e os horários/dias que ficaram vazios
+  // Esconde os jogos de outros esportes e os horários, campeonatos e dias que ficaram vazios
   function aplicarEsporte() {
     document.querySelectorAll('.jogo').forEach((j) => { j.hidden = esporte && j.dataset.esporte !== esporte; });
     document.querySelectorAll('.hora').forEach((h) => {
@@ -221,11 +284,28 @@ ${seletor}
       while (el && el.classList.contains('jogo')) { if (!el.hidden) algum = true; el = el.nextElementSibling; }
       h.hidden = !algum;
     });
+    document.querySelectorAll('.grupo').forEach((g) => { g.hidden = !g.querySelector('.jogo:not([hidden])'); });
     document.querySelectorAll('.dia').forEach((d) => {
       let el = d.nextElementSibling, algum = false;
-      while (el && !el.classList.contains('dia')) { if (el.classList.contains('jogo') && !el.hidden) algum = true; el = el.nextElementSibling; }
+      while (el && el.classList.contains('grupo')) { if (!el.hidden) algum = true; el = el.nextElementSibling; }
       d.hidden = !algum;
     });
+  }
+
+  const seletor = document.getElementById('emissora');
+  function mostrar() {
+    const s = decodeURIComponent(location.hash.slice(1));
+    const nome = NOMES[s];
+    const caixa = document.getElementById('porEmissora');
+    document.getElementById('dia').hidden = !!nome;
+    caixa.hidden = !nome;
+    seletor.value = nome ? s : '';
+    if (nome) {
+      caixa.innerHTML = paginaDaEmissora(nome);
+      document.title = 'Jogos na ' + nome + ' · Agenda esportiva';
+      caixa.scrollIntoView({ block: 'start' });
+    }
+    aplicarEsporte();
   }
 
   document.querySelectorAll('.filtros button').forEach((b) => b.addEventListener('click', () => {
@@ -233,15 +313,8 @@ ${seletor}
     esporte = b.dataset.esporte;
     aplicarEsporte();
   }));
-  const seletor = document.getElementById('emissora');
-  seletor.addEventListener('change', () => {
-    mostrarEmissora(seletor.value);
-    try { history.replaceState(null, '', seletor.value ? '#' + encodeURIComponent(seletor.value) : location.pathname); } catch {}
-  });
-  // Link direto pra uma emissora: .../#CazéTV
-  const pedida = decodeURIComponent(location.hash.slice(1));
-  if (pedida && [...seletor.options].some((o) => o.value === pedida)) { seletor.value = pedida; mostrarEmissora(pedida); }
-</script>
-</body></html>
-`;
+  seletor.addEventListener('change', () => { location.hash = seletor.value; if (!seletor.value) mostrar(); });
+  window.addEventListener('hashchange', mostrar);
+  mostrar();
+</script>`;
 }

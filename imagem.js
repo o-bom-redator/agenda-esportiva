@@ -7,7 +7,7 @@ export const CORES = { futebol: '#16a34a', basquete: '#ea580c', volei: '#d4a106'
 export const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
 // Classifica o canal pra dar cor ao "chip": YouTube (grátis), streaming ou TV.
-function tipoCanal(canal) {
+export function tipoCanal(canal) {
   if (/youtube|\byt\b|cazé|getv|ge tv/i.test(canal)) return 'yt';
   if (/disney|prime|max|globoplay|paramount|netflix|league pass|dazn|apple|star\+|onefootball|sportynet/i.test(canal)) return 'stream';
   return 'tv';
