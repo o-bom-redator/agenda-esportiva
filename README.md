@@ -190,6 +190,7 @@ Depois de alterar, faça commit e push pra que o GitHub use a versão nova.
 |---|---|
 | `gerar.js` | Script principal: busca, filtra, gera imagens, texto e página |
 | `scraper.js` | Busca os jogos na API do futnatv e junta os do oGol |
+| `prototipo.js` | Prévia local do futuro site **Partidas do Dia** (header com busca e menus): `node prototipo.js` gera `previa/partidas-do-dia.html` |
 | `ogol.js` | Lê o feed de transmissões do oGol (reforço do futnatv; se um cair, o outro segura) |
 | `emissoras.json` | Nomes padronizados das emissoras (ex.: `PFC` → Premiere, `CTV` → CazéTV). Edite à mão |
 | `emissoras.js` | Aplica o `emissoras.json`; nome novo aparece no log da agenda |
