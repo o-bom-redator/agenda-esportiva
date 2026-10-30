@@ -184,6 +184,37 @@ function listarProximos() {
   return `⏰ Próximos avisos (${config.avisos?.minutosAntes ?? 15} min antes):\n\n${jogos.map((j) => `${hora(j)} · ${j.mandante} x ${j.visitante} (${j.campeonato})`).join('\n')}`;
 }
 
+// Guarda da agenda: o agendamento do GitHub falha (em 30/10 não disparou nenhum horário),
+// então o bot, que fica ligado o dia todo, confere a cada 10 min a partir das 4h30 se a release
+// do dia já existe e, se não, dispara o workflow da agenda. Só roda no GitHub (precisa do GH_TOKEN).
+const REPO = process.env.GITHUB_REPOSITORY;
+let agendaDisparada = '';
+async function guardarAgenda() {
+  if (!REPO || !process.env.GH_TOKEN) return;
+  const agora = new Date();
+  const hoje = agora.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+  const [h, m] = agora.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour12: false }).split(':').map(Number);
+  if (h * 60 + m < 4 * 60 + 30 || agendaDisparada === hoje) return;
+  const gh = (caminho, opcoes = {}) => fetch(`https://api.github.com/repos/${REPO}${caminho}`, {
+    ...opcoes,
+    headers: { Authorization: `Bearer ${process.env.GH_TOKEN}`, Accept: 'application/vnd.github+json', 'User-Agent': 'agenda-esportiva-bot' },
+  });
+  try {
+    if ((await gh(`/releases/tags/agenda-${hoje}`)).ok) return void (agendaDisparada = hoje);
+    // Se já tem uma agenda rodando ou na fila, espera ela
+    const runs = await (await gh('/actions/workflows/agenda.yml/runs?per_page=5')).json();
+    if (runs.workflow_runs?.some((r) => r.status !== 'completed')) return;
+    const res = await gh('/actions/workflows/agenda.yml/dispatches', { method: 'POST', body: JSON.stringify({ ref: 'main', inputs: { data: 'hoje' } }) });
+    if (!res.ok) throw new Error(`o GitHub respondeu ${res.status}`);
+    agendaDisparada = hoje;
+    log('Agenda de hoje ainda não tinha saído: disparei o workflow.');
+  } catch (e) {
+    log('Guarda da agenda:', e.message);
+  }
+}
+guardarAgenda();
+setInterval(guardarAgenda, 10 * 60_000);
+
 // Fica perguntando ao Telegram se chegou mensagem nova (long polling).
 let offset = 0;
 let trabalhando = 0; // GIFs sendo feitos agora

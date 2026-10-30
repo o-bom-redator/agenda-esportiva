@@ -55,6 +55,7 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           PARAR_AS: '5,11,17,23'
           MINUTOS_MAX: ${{ github.event.inputs.minutos }}
+          GH_TOKEN: ${{ github.token }} # pra disparar a agenda se o agendamento do GitHub falhar
 
       - name: Guardar avisos enviados
         if: always()
