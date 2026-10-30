@@ -67,6 +67,12 @@ function chipsComLink(transmissao) {
 
 const CALENDARIO = '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4.75 0a.75.75 0 0 1 .75.75V2h5V.75a.75.75 0 0 1 1.5 0V2h1.25c.966 0 1.75.784 1.75 1.75v10.5A1.75 1.75 0 0 1 13.25 16H2.75A1.75 1.75 0 0 1 1 14.25V3.75C1 2.784 1.784 2 2.75 2H4V.75A.75.75 0 0 1 4.75 0ZM2.5 7.5v6.75c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25V7.5Zm10.75-4H2.75a.25.25 0 0 0-.25.25V6h11V3.75a.25.25 0 0 0-.25-.25Z"/></svg>';
 
+// Cores do modo escuro (usadas pelo sistema e pelo botão de tema)
+const ESCURO = `color-scheme: dark;
+    --fundo: #0d1117; --card: #161b22; --elevado: #1c2128; --linha: #30363d; --linha-forte: #484f58;
+    --texto: #e6edf3; --suave: #8b949e; --apagado: #484f58; --link: #58a6ff; --primaria: #2f81f7; --destaque: #f78166;
+    --tv: #58a6ff; --stream: #bc8cff; --yt: #f85149;`;
+
 // Início do jogo com fuso ("2026-10-30T15:00:00-03:00"), pro selo "Ao vivo" que o navegador liga e desliga
 const inicioIso = (j) => `${j.data}T${j.horario.replace('h', ':').padEnd(5, '0')}:00-03:00`;
 const AO_VIVO = '<span class="aovivo" hidden><span class="pulso"></span>Ao vivo</span>';
@@ -138,18 +144,16 @@ export function gerarPagina(jogos, data, semana = [{ data, jogos }], opcoes = {}
 <meta property="og:description" content="${jogos.length} jogos com horário e onde assistir. Toque no jogo pra salvar na sua agenda.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📅</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>try { const t = localStorage.getItem('tema'); if (t) document.documentElement.dataset.tema = t; } catch {}</script>
 <style>
-  /* Visual inspirado no "Octo Code": escuro primeiro, camadas de cor em vez de sombra, raio 6px, peso até 600 */
-  :root { color-scheme: dark;
-    --fundo: #0d1117; --card: #161b22; --elevado: #1c2128; --linha: #30363d; --linha-forte: #484f58;
-    --texto: #e6edf3; --suave: #8b949e; --apagado: #484f58; --link: #58a6ff; --primaria: #2f81f7; --destaque: #f78166;
-    --tv: #58a6ff; --stream: #bc8cff; --yt: #f85149; }
-  @media (prefers-color-scheme: light) {
-    :root:not([data-tema="escuro"]) { color-scheme: light;
-      --fundo: #ffffff; --card: #f6f8fa; --elevado: #eaeef2; --linha: #d0d7de; --linha-forte: #afb8c1;
-      --texto: #1f2328; --suave: #656d76; --apagado: #8c959f; --link: #0969da; --primaria: #0969da; --destaque: #fd8c73;
-      --tv: #0969da; --stream: #8250df; --yt: #cf222e; }
-  }
+  /* Visual inspirado no "Octo Code": camadas de cor em vez de sombra, raio 6px, peso até 600.
+     Claro por padrão; escuro se o aparelho estiver no modo escuro ou se a pessoa escolher no botão. */
+  :root { color-scheme: light;
+    --fundo: #ffffff; --card: #f6f8fa; --elevado: #eaeef2; --linha: #d0d7de; --linha-forte: #afb8c1;
+    --texto: #1f2328; --suave: #656d76; --apagado: #8c959f; --link: #0969da; --primaria: #0969da; --destaque: #fd8c73;
+    --tv: #0969da; --stream: #8250df; --yt: #cf222e; }
+  @media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) { ${ESCURO} } }
+  :root[data-tema="escuro"] { ${ESCURO} }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font: 400 14px/1.5 'Inter', -apple-system, 'Segoe UI', Arial, sans-serif; background: var(--fundo); color: var(--texto); }
   .wrap { max-width: 768px; margin: 0 auto; padding: 0 16px; }
@@ -244,12 +248,12 @@ export function gerarPagina(jogos, data, semana = [{ data, jogos }], opcoes = {}
   .grupo-topo { display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--elevado); border-bottom: 1px solid var(--linha); }
   .grupo-topo b { font-size: 14px; font-weight: 600; }
   .grupo-topo small { font-size: 12px; color: var(--suave); }
-  .linha { display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; align-items: center; padding: 12px 16px; }
+  .linha { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 40%); gap: 8px 16px; align-items: center; padding: 12px 16px; }
   .linha + .linha { border-top: 1px solid var(--linha); }
   .linha:hover { background: var(--elevado); }
-  .confronto { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center; font-weight: 600; }
+  .confronto { display: grid; grid-template-columns: minmax(0, 1fr) 88px minmax(0, 1fr); gap: 12px; align-items: center; font-weight: 600; }
   .confronto .casa { text-align: right; }
-  .confronto .hr { font-size: 14px; text-align: center; color: var(--texto); background: var(--fundo); border: 1px solid var(--linha);
+  .confronto .hr { justify-self: center; font-size: 14px; text-align: center; color: var(--texto); background: var(--fundo); border: 1px solid var(--linha);
     border-radius: 6px; padding: 2px 8px; }
   .confronto .hr small { display: block; font: 500 10px 'Inter', sans-serif; color: var(--suave); }
   .linha .lado { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
@@ -288,31 +292,19 @@ ${script(dados, dias)}
 
 const LUPA = '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M10.68 11.74a6 6 0 0 1-7.922-8.982 6 6 0 0 1 8.982 7.922l3.04 3.04a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215ZM11.5 7a4.499 4.499 0 1 0-8.997 0A4.499 4.499 0 0 0 11.5 7Z"/></svg>';
 const SETA = '<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12.78 5.22a.749.749 0 0 1 0 1.06l-4.25 4.25a.749.749 0 0 1-1.06 0L3.22 6.28a.749.749 0 1 1 1.06-1.06L8 8.94l3.72-3.72a.749.749 0 0 1 1.06 0Z"/></svg>';
+const LUA = '<svg class="lua" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M9.598 1.591a.749.749 0 0 1 .785-.175 7.001 7.001 0 1 1-8.967 8.967.75.75 0 0 1 .961-.96 5.5 5.5 0 0 0 7.046-7.046.75.75 0 0 1 .175-.786Zm1.616 1.945a7 7 0 0 1-7.678 7.678 5.499 5.499 0 1 0 7.678-7.678Z"/></svg>';
+const SOL = '<svg class="sol" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 12a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm0-1.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm5.657-8.157a.75.75 0 0 1 0 1.061l-1.061 1.06a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734l1.06-1.06a.75.75 0 0 1 1.06 0Zm-9.193 9.193a.75.75 0 0 1 0 1.06l-1.06 1.061a.75.75 0 1 1-1.061-1.06l1.06-1.061a.75.75 0 0 1 1.061 0ZM8 0a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0V.75A.75.75 0 0 1 8 0ZM3 8a.75.75 0 0 1-.75.75H.75a.75.75 0 0 1 0-1.5h1.5A.75.75 0 0 1 3 8Zm13 0a.75.75 0 0 1-.75.75h-1.5a.75.75 0 0 1 0-1.5h1.5A.75.75 0 0 1 16 8Zm-8 5a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 8 13Zm3.536-1.464a.75.75 0 0 1 1.06 0l1.061 1.06a.75.75 0 0 1-1.06 1.061l-1.061-1.06a.75.75 0 0 1 0-1.061ZM2.343 2.343a.75.75 0 0 1 1.061 0l1.06 1.061a.751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018l-1.06-1.06a.75.75 0 0 1 0-1.06Z"/></svg>';
 // Marca: bola com o "play" da transmissão
 const LOGO = '<svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="15" fill="none" stroke="#3fb950" stroke-width="2.5"/>'
   + '<circle cx="17" cy="17" r="10" fill="none" stroke="#3fb950" stroke-width="1.5" stroke-dasharray="3 3" opacity=".55"/><path d="M14 11.5v11l9-5.5z" fill="currentColor"/></svg>';
-const TIPOS = { tv: 'TV', stream: 'Streaming', yt: 'YouTube' };
 
 function cabecalhoPartidas(dados, dias) {
-  // Canais (por tipo) e campeonatos (por esporte), com quantos jogos têm nos próximos dias
-  const canais = new Map();
+  // Campeonatos (por esporte), com quantos jogos têm nos próximos dias
   const camps = new Map();
   for (const j of dados) {
-    for (const c of new Set(j.t)) {
-      const nome = emissoraDoFiltro(c);
-      const atual = canais.get(nome) || { n: 0, tipo: tipoCanal(c) };
-      atual.n++;
-      canais.set(nome, atual);
-    }
     const chave = `${j.e}|${j.c}`;
     camps.set(chave, (camps.get(chave) || 0) + 1);
   }
-  const colunasCanais = Object.entries(TIPOS).map(([tipo, titulo]) => {
-    const itens = [...canais].filter(([, v]) => v.tipo === tipo).sort((a, b) => b[1].n - a[1].n);
-    if (!itens.length) return '';
-    return `<div class="coluna"><h4>${titulo}</h4>${itens.map(([nome, v]) =>
-      `<a href="#canal/${slug(nome)}"><span class="marcador ${tipo}"></span>${esc(nome)}<small>${v.n}</small></a>`).join('')}</div>`;
-  }).join('');
   const colunasCamps = Object.keys(ESPORTES).map((e) => {
     const itens = [...camps].filter(([k]) => k.startsWith(`${e}|`)).sort((a, b) => b[1] - a[1]);
     if (!itens.length) return '';
@@ -329,15 +321,11 @@ function cabecalhoPartidas(dados, dias) {
       <input id="busca" type="search" placeholder="Buscar jogos, times, canais..." autocomplete="off" aria-label="Buscar jogos, times ou canais">
       <button type="submit" aria-label="Buscar">${LUPA}</button>
     </form>
+    <button class="tema" type="button" id="tema" aria-label="Alternar modo claro/escuro" title="Modo claro/escuro">${LUA}${SOL}</button>
   </div>
   <nav class="menu" aria-label="Principal"><div class="wrap menu-linha">
     <a class="item" data-menu="ao-vivo" href="#ao-vivo"><span class="pulso"></span>Ao vivo<span class="contador contador-vivo" hidden></span></a>
-    <div class="item sub" data-menu="canal">
-      <button type="button" aria-expanded="false" aria-haspopup="true">Canais ${SETA}</button>
-      <div class="painel"><div class="painel-topo"><b>Canais</b><span>jogos nos próximos ${dias} dias</span></div>
-        <div class="colunas">${colunasCanais}</div>
-        <a class="ver-todos" href="/canais/">Ver todos os canais →</a></div>
-    </div>
+    <a class="item" data-menu="canal canais" href="#canais">Canais</a>
     <div class="item sub" data-menu="campeonato">
       <button type="button" aria-expanded="false" aria-haspopup="true">Campeonatos ${SETA}</button>
       <div class="painel largo"><div class="painel-topo"><b>Campeonatos</b><span>jogos nos próximos ${dias} dias</span></div>
@@ -365,6 +353,23 @@ const CSS_PARTIDAS = `
   .busca button { width: 40px; height: 36px; display: grid; place-items: center; color: #fff; background: #238636;
     border: 1px solid rgba(240,246,252,.1); border-radius: 0 6px 6px 0; cursor: pointer; }
   .busca button:hover { background: #2ea043; }
+
+  .tema { flex: none; width: 36px; height: 36px; display: grid; place-items: center; color: var(--suave); background: var(--fundo);
+    border: 1px solid var(--linha); border-radius: 6px; cursor: pointer; }
+  .tema:hover { color: var(--texto); border-color: var(--linha-forte); }
+  .tema .sol { display: none; }
+  @media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) .tema .sol { display: block; } :root:not([data-tema="claro"]) .tema .lua { display: none; } }
+  :root[data-tema="escuro"] .tema .sol { display: block; }
+  :root[data-tema="escuro"] .tema .lua { display: none; }
+  .busca { margin-left: auto; }
+
+  /* Página "Canais": índice com o link de cada emissora */
+  .indice h3 { font-size: 14px; font-weight: 600; color: var(--suave); margin: 24px 0 8px; }
+  .indice .cartoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+  .indice a { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--card); border: 1px solid var(--linha);
+    border-radius: 6px; color: var(--texto); text-decoration: none; font-weight: 600; transition: border-color .1s; }
+  .indice a:hover { border-color: var(--linha-forte); }
+  .indice a small { margin-left: auto; font-weight: 400; font-size: 12px; color: var(--suave); }
 
   .menu { border-top: 1px solid var(--linha); }
   .menu-linha { display: flex; gap: 4px; height: 48px; align-items: stretch; }
@@ -412,7 +417,8 @@ const CSS_PARTIDAS = `
   @media (max-width: 680px) {
     .topo { position: static; }
     .topo-linha { flex-wrap: wrap; height: auto; padding-top: 12px; padding-bottom: 12px; gap: 12px; }
-    .busca { flex: 1 1 100%; }
+    .busca { flex: 1 1 auto; order: 3; width: calc(100% - 48px); margin-left: 0; }
+    .tema { order: 2; margin-left: auto; }
     .menu-linha { overflow-x: auto; scrollbar-width: none; }
     .menu .item { position: static; }
     .painel.largo .coluna:first-child { grid-column: auto; column-count: 1; }
@@ -445,9 +451,10 @@ function script(dados, dias) {
   const nomeDia = (d, o) => { const s = new Date(d + 'T12:00:00-03:00').toLocaleDateString('pt-BR', o); return s.charAt(0).toUpperCase() + s.slice(1); };
   const rotulo = (d) => d === hojeBR() ? 'Hoje' : d === hojeBR(1) ? 'Amanhã' : nomeDia(d, { weekday: 'long', day: '2-digit', month: '2-digit' });
   const CANAIS = {}; // slug → nome da emissora
+  const TIPO_CANAL = {}; // slug → tv | stream | yt
   const CAMPEONATOS = {}; // slug → nome do campeonato
   for (const j of SEMANA) {
-    for (const c of j.t) CANAIS[slug(filtro(c))] = filtro(c);
+    for (const c of j.t) { CANAIS[slug(filtro(c))] = filtro(c); TIPO_CANAL[slug(filtro(c))] ||= tipo(c); }
     CAMPEONATOS[slug(j.c)] = j.c;
   }
   const inicio = (j) => Date.parse(j.d + 'T' + j.h.replace('h', ':') + ':00-03:00');
@@ -509,6 +516,18 @@ function script(dados, dias) {
       return { menu: 'ao-vivo', titulo: 'Ao vivo agora', html: topo('Ao vivo', 'Ao vivo agora',
         l.length ? qtd(l.length) + ' acontecendo agora' : 'Nenhum jogo da agenda está rolando agora.') + (l.length ? lista(l) : '') };
     }
+    if (h === 'canais') {
+      // Página dos canais (aqui vai o texto de SEO): cada emissora leva à sua página de jogos
+      const conta = {};
+      for (const j of SEMANA) for (const c of new Set(j.t.map(filtro))) conta[slug(c)] = (conta[slug(c)] || 0) + 1;
+      const grupos = [['tv', 'TV'], ['stream', 'Streaming'], ['yt', 'YouTube']].map(([t, titulo]) => {
+        const itens = Object.keys(CANAIS).filter((k) => TIPO_CANAL[k] === t).sort((a, b) => conta[b] - conta[a]);
+        return itens.length ? '<h3>' + titulo + '</h3><div class="cartoes">' + itens.map((k) => '<a href="#canal/' + k + '"><span class="marcador ' + t + '"></span>'
+          + esc(CANAIS[k]) + '<small>' + conta[k] + (conta[k] === 1 ? ' jogo' : ' jogos') + '</small></a>').join('') + '</div>' : '';
+      }).join('');
+      return { menu: 'canais', titulo: 'Canais', html: topo('Onde assistir', 'Canais', '<b>' + Object.keys(CANAIS).length + '</b> canais com jogos nos próximos ' + DIAS + ' dias')
+        + '<div class="indice">' + grupos + '</div>' };
+    }
     if (tipoRota === 'campeonato' && CAMPEONATOS[valor]) {
       const nome = CAMPEONATOS[valor];
       const l = SEMANA.filter((j) => j.c === nome);
@@ -560,7 +579,7 @@ function script(dados, dias) {
     caixa.hidden = !r;
     if (seletor) seletor.value = r && r.menu === 'canal' ? r.canal : '';
     if (busca && !(r && r.menu === 'busca')) busca.value = '';
-    document.querySelectorAll('[data-menu]').forEach((el) => el.classList.toggle('ativo', !!r && el.dataset.menu === r.menu));
+    document.querySelectorAll('[data-menu]').forEach((el) => el.classList.toggle('ativo', !!r && el.dataset.menu.split(' ').includes(r.menu)));
     if (r) {
       caixa.innerHTML = r.html;
       document.title = r.titulo + ' · ' + tituloOriginal.split(':')[0];
@@ -587,6 +606,15 @@ function script(dados, dias) {
   }));
   document.addEventListener('click', (e) => { if (!e.target.closest('.sub .painel')) fecharMenus(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') fecharMenus(); });
+
+  // Botão de tema: alterna entre claro e escuro e lembra a escolha
+  const botaoTema = document.getElementById('tema');
+  if (botaoTema) botaoTema.addEventListener('click', () => {
+    const raiz = document.documentElement;
+    const escuroAgora = raiz.dataset.tema ? raiz.dataset.tema === 'escuro' : matchMedia('(prefers-color-scheme: dark)').matches;
+    raiz.dataset.tema = escuroAgora ? 'claro' : 'escuro';
+    try { localStorage.setItem('tema', raiz.dataset.tema); } catch {}
+  });
 
   // Busca: resultados enquanto digita (a partir de 2 letras), sem encher o histórico
   if (busca) {
