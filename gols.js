@@ -26,10 +26,18 @@ const LANCES = [
   [/\b(great|amazing|incredible|stunning|wonder) (goal|strike)\b|golaço/i, 'golaço'],
 ];
 
+// Posts com placar e minuto que não são de gol
+const NAO_GOL = /thread|red card|cart[aã]o vermelho|expuls|\bsave\b|defesa|\bmiss|perde|disallowed|anulad|highlights|melhores momentos|chance/i;
+
 export function lerTitulo(titulo) {
+  if (NAO_GOL.test(titulo)) return null;
   const pedacos = titulo.replace(/\s+/g, ' ').trim().split(PEDACOS);
-  // o colchete tem que estar no placar (não vale "[Post-Match Thread] ... Bahia 3 x 2 São Paulo")
-  const i = pedacos.findIndex((p) => `${p.match(PLACAR)?.[2]}${p.match(PLACAR)?.[3]}`.includes('['));
+  const placar = (p) => p.match(PLACAR);
+  // De preferência o pedaço com colchete no placar ("Bahia [3] x 2 São Paulo"); muito post do
+  // r/soccer vem sem ("Benfica 1-0 Gil Vicente - Dodi Lukebakio 36'"): aí precisa ter o minuto do gol
+  let i = pedacos.findIndex((p) => `${placar(p)?.[2]}${placar(p)?.[3]}`.includes('['));
+  const semColchete = i < 0;
+  if (semColchete) i = pedacos.findIndex((p) => placar(p) && /^\d+$/.test(placar(p)[2]) && /^\d+$/.test(placar(p)[3]));
   if (i < 0) return null;
   const [, mandante, p1, p2, visitante] = pedacos[i].match(PLACAR);
   let resto = pedacos.filter((p, n) => n !== i && !CAMPEONATO.test(p)).join(' ');
@@ -38,6 +46,7 @@ export function lerTitulo(titulo) {
   resto = resto.replace(/[’‘´]/g, "'")
     .replace(/(\d+)\s*'?\s*\/?\s*([12])\s*T\b/gi, (_, n, t) => `${t === '2' && Number(n) <= 45 ? Number(n) + 45 : n}'`);
   const ultimo = [...resto.matchAll(MINUTO)].at(-1);
+  if (semColchete && (!ultimo || pedacos.length < 2 || /\d/.test(visitante))) return null;
   const minuto = ultimo ? `${ultimo[1]}${ultimo[2] ? `+${ultimo[2]}` : ''}'` : '';
   const lances = LANCES.filter(([re]) => re.test(resto)).map(([, nome]) => nome);
   let autor = resto.replace(MINUTO, '');
