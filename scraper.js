@@ -1,4 +1,10 @@
-// Busca os jogos na API do futnatv (a mesma que o site usa pra trocar de dia).
+// Busca os jogos na API do futnatv (a mesma que o site usa pra trocar de dia) e completa o
+// futebol com o feed do oGol (ogol.js): se uma fonte cair, a outra segura.
+import { separarCanais } from './imagem.js';
+import { padronizar } from './emissoras.js';
+import { buscarOgol } from './ogol.js';
+import { acharJogo } from './times.js';
+
 export const ESPORTES = {
   futebol: { nome: 'Futebol', icone: '⚽' },
   basquete: { nome: 'Basquete', icone: '🏀' },
@@ -26,8 +32,15 @@ export function diaSeguinte(data) {
 export const VIRADA = 6;
 const hora = (horario) => Number(horario.split('h')[0]);
 
-// Busca os jogos de um esporte numa data.
-export async function buscarJogos(esporte, data) {
+// Busca os jogos de um esporte numa data. Guarda o resultado (a agenda da semana pede o mesmo dia duas vezes).
+const pedidos = new Map();
+export function buscarJogos(esporte, data) {
+  const chave = `${esporte} ${data}`;
+  if (!pedidos.has(chave)) pedidos.set(chave, buscarNoFutnatv(esporte, data).catch((e) => { pedidos.delete(chave); throw e; }));
+  return pedidos.get(chave);
+}
+
+async function buscarNoFutnatv(esporte, data) {
   const res = await fetch(`https://futnatv.net/api/${esporte}?data=${data}`, {
     headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/130 Safari/537.36' },
   });
@@ -57,19 +70,51 @@ export async function buscarJogos(esporte, data) {
     });
 }
 
+const minutos = (horario) => { const [h, m] = horario.split('h').map(Number); return h * 60 + (m || 0); };
+
+// Junta os jogos do oGol: o mesmo jogo (horário até 30 min diferente e times parecidos) ganha a
+// emissora que faltava; jogo que o futnatv não tem entra na lista.
+function juntarOgol(jogos, doOgol) {
+  for (const o of doOgol) {
+    const candidatos = jogos.filter((j) => j.esporte === 'futebol' && j.data === o.data && Math.abs(minutos(j.horario) - minutos(o.horario)) <= 30);
+    const igual = acharJogo(o, candidatos);
+    if (igual) {
+      if (!separarCanais(igual.transmissao).map(padronizar).includes(padronizar(o.transmissao))) igual.transmissao += `, ${o.transmissao}`;
+    } else {
+      jogos.push({ ...o, campeonato: o.campeonato || 'Futebol' });
+    }
+  }
+}
+
 // Busca todos os esportes pedidos e junta numa lista só, em ordem de horário
-// (do dia, a partir das 6h, até a madrugada seguinte). Se um esporte falhar, segue com os outros.
+// (do dia, a partir das 6h, até a madrugada seguinte). Se uma fonte falhar, segue com as outras.
 export async function buscarTodos(esportes = Object.keys(ESPORTES), data = chaveData()) {
   const amanha = diaSeguinte(data);
-  const pedidos = esportes.flatMap((e) => [[e, data], [e, amanha]]);
-  const resultados = await Promise.allSettled(pedidos.map(([e, d]) => buscarJogos(e, d)));
+  const lista = esportes.flatMap((e) => [[e, data], [e, amanha]]);
+  const [ogol, ...resultados] = await Promise.allSettled([
+    esportes.includes('futebol') ? buscarOgol() : Promise.resolve([]),
+    ...lista.map(([e, d]) => buscarJogos(e, d)),
+  ]);
   const jogos = [];
   resultados.forEach((r, i) => {
-    if (r.status === 'fulfilled') jogos.push(...r.value);
-    else console.error(`Falha ao buscar ${pedidos[i].join(' ')}:`, r.reason.message);
+    if (r.status === 'fulfilled') jogos.push(...r.value.map((j) => ({ ...j })));
+    else console.error(`Falha ao buscar ${lista[i].join(' ')}:`, r.reason.message);
   });
-  if (resultados.every((r) => r.status === 'rejected')) throw new Error('Não consegui acessar o futnatv.');
+  if (ogol.status === 'rejected') console.error('Falha ao buscar o oGol:', ogol.reason.message);
+  if (resultados.every((r) => r.status === 'rejected') && !ogol.value?.length) throw new Error('Não consegui acessar o futnatv nem o oGol.');
+  const naJanela = (j) => (j.data === data ? hora(j.horario) >= VIRADA : j.data === amanha && hora(j.horario) < VIRADA);
+  juntarOgol(jogos, (ogol.value || []).filter(naJanela));
   return jogos
-    .filter((j) => (j.data === data ? hora(j.horario) >= VIRADA : hora(j.horario) < VIRADA))
+    .filter(naJanela)
+    .map((j) => ({ ...j, transmissao: [...new Set(separarCanais(j.transmissao).map(padronizar))].join(', ') }))
     .sort((x, y) => `${x.data} ${x.horario}`.localeCompare(`${y.data} ${y.horario}`));
+}
+
+// Agenda de vários dias (pro filtro por emissora do site): [{ data, jogos }]
+export async function buscarDias(esportes, data, dias = 7) {
+  const datas = [data];
+  while (datas.length < dias) datas.push(diaSeguinte(datas.at(-1)));
+  const res = await Promise.allSettled(datas.map((d) => buscarTodos(esportes, d)));
+  if (res[0].status === 'rejected') throw res[0].reason; // o dia principal é obrigatório; os outros são extra
+  return datas.map((d, i) => ({ data: d, jogos: res[i].status === 'fulfilled' ? res[i].value : [] }));
 }

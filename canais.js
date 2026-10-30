@@ -42,9 +42,9 @@ function linkYoutube(canal, jogo) {
   return handle ? `https://www.youtube.com/@${handle}/streams` : buscaYoutube(canal, jogo);
 }
 
-// "YouTube (CazéTV)" → nome "CazéTV" e link do canal; "Disney+" → link do Disney+
+// "CazéTV (YouTube)" ou "YouTube (CazéTV)" → nome "CazéTV" e link do canal; "Disney+" → link do Disney+
 export function linkCanal(canal, jogo) {
-  const yt = canal.match(/^(?:youtube|yt)\s*\((.+)\)$/i);
+  const yt = canal.match(/^(?:youtube|yt)\s*\((.+)\)$/i) || canal.match(/^(.+?)\s*\(youtube\)$/i);
   if (yt) return { nome: yt[1], link: linkYoutube(yt[1], jogo) };
   if (SO_YOUTUBE.test(canal)) return { nome: canal, link: linkYoutube(canal, jogo) };
   return { nome: canal, link: LINKS.find(([re]) => re.test(canal))?.[1] || '' };

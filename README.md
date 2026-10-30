@@ -1,6 +1,7 @@
 # 📅 Agenda esportiva do dia
 
-Gera, todo dia **de manhã cedo (a partir das 4h17, Brasília)**, a agenda de jogos transmitidos na TV e no streaming, com dados do [futnatv.net](https://futnatv.net): **futebol, basquete, vôlei e NFL**.
+Gera, todo dia **de manhã cedo (a partir das 4h17, Brasília)**, a agenda de jogos transmitidos na TV e no streaming, com dados do [futnatv.net](https://futnatv.net) e do [oGol](https://www.ogol.com.br/zapping) (futebol): **futebol, basquete, vôlei e NFL**.
+Na página, o seletor **📺 Emissora** mostra todos os jogos de uma emissora nos próximos 7 dias.
 
 São dois formatos:
 
@@ -19,7 +20,7 @@ São dois formatos:
 ```
 GitHub Actions (todo dia a partir das 4h17, com horários de reserva até 7h47)
    │
-   ├─ scraper.js  → busca os jogos do dia na API do futnatv (por esporte e data)
+   ├─ scraper.js  → busca os jogos do dia na API do futnatv (por esporte e data) e junta os do oGol
    ├─ mensagem.js → aplica filtros (sem categorias de base) e monta a versão em texto
    ├─ imagem.js   → desenha a agenda em HTML e tira "foto" com o Chrome (Puppeteer)
    ├─ pagina.js   → gera a página com os links do Google Agenda e o arquivo .ics
@@ -188,7 +189,11 @@ Depois de alterar, faça commit e push pra que o GitHub use a versão nova.
 | Arquivo | Função |
 |---|---|
 | `gerar.js` | Script principal: busca, filtra, gera imagens, texto e página |
-| `scraper.js` | Busca os jogos na API do futnatv |
+| `scraper.js` | Busca os jogos na API do futnatv e junta os do oGol |
+| `ogol.js` | Lê o feed de transmissões do oGol (reforço do futnatv; se um cair, o outro segura) |
+| `emissoras.json` | Nomes padronizados das emissoras (ex.: `PFC` → Premiere, `CTV` → CazéTV). Edite à mão |
+| `emissoras.js` | Aplica o `emissoras.json`; nome novo aparece no log da agenda |
+| `times.js` | Compara nomes de times de fontes diferentes |
 | `mensagem.js` | Filtros e versão em texto (formato WhatsApp) |
 | `imagem.js` | Layout e geração das imagens PNG |
 | `pagina.js` | Página com links do Google Agenda e arquivo `.ics` |
@@ -211,6 +216,6 @@ Depois de alterar, faça commit e push pra que o GitHub use a versão nova.
 
 ## Observações
 
-- **Origem dos dados:** os dados vêm do futnatv.net. Se o site mudar a API, a busca pode parar de funcionar, e o erro aparece na aba **Actions**.
+- **Origem dos dados:** os dados vêm do futnatv.net e, no futebol, também do feed do oGol (que cobre só ~30 h à frente e não diz o campeonato: jogo que só o oGol tem aparece como "Futebol"). Se o site mudar a API, a busca pode parar de funcionar, e o erro aparece na aba **Actions**.
 - **Atraso:** o GitHub pode atrasar alguns minutos o horário agendado.
 - **Duração dos eventos:** a duração dos jogos na agenda é estimada (futebol e vôlei 2h, basquete 2h30, NFL 3h30).

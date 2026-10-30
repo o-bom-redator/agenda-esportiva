@@ -7,7 +7,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { buscarTodos, chaveData } from './scraper.js';
+import { buscarDias, chaveData } from './scraper.js';
+import { desconhecidas } from './emissoras.js';
 import { filtrarJogos, montarMensagem, formatarData } from './mensagem.js';
 import { gerarImagens } from './imagem.js';
 import { gerarPagina, gerarIcs } from './pagina.js';
@@ -29,7 +30,9 @@ const avisar = (titulo, texto) =>
 try {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) throw new Error('Data inválida. Use --data amanha ou --data AAAA-MM-DD');
 
-  const jogos = filtrarJogos(await buscarTodos(config.esportes, data), config);
+  // O dia da agenda e os próximos (pro filtro por emissora da página)
+  const semana = (await buscarDias(config.esportes, data, config.diasNoSite ?? 7)).map((d) => ({ ...d, jogos: filtrarJogos(d.jogos, config) }));
+  const jogos = semana[0].jogos;
   const pasta = path.join(DIR, 'imagens', data);
   fs.mkdirSync(pasta, { recursive: true });
   fs.readdirSync(pasta).forEach((f) => fs.unlinkSync(path.join(pasta, f)));
@@ -41,7 +44,7 @@ try {
   // Página com os links do Google Agenda (publicada pelo GitHub Pages)
   const site = path.join(DIR, 'site');
   fs.mkdirSync(site, { recursive: true });
-  fs.writeFileSync(path.join(site, 'index.html'), gerarPagina(jogos, data));
+  fs.writeFileSync(path.join(site, 'index.html'), gerarPagina(jogos, data, semana));
   fs.writeFileSync(path.join(site, 'agenda.ics'), gerarIcs(jogos, data));
 
   // Imagens no Telegram (no GitHub, quando os segredos do bot existem)
@@ -51,6 +54,7 @@ try {
       .catch((e) => log('Telegram:', e.message)); // falha aqui não derruba a agenda
   }
 
+  if (desconhecidas.size) log('Emissoras fora do emissoras.json (aparecem como vieram):', [...desconhecidas].join(' | '));
   const resumo = imagens.length ? `${jogos.length} jogos em ${imagens.length} imagem(ns)` : 'Nenhum jogo com transmissão';
   log(`${formatarData(data)}: ${resumo} → ${pasta}`);
   await avisar(`Agenda de ${formatarData(data)} pronta`, `${resumo}. Pasta: ${pasta.replace(process.env.HOME, '~')}`);

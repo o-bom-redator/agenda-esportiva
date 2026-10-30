@@ -4,6 +4,7 @@
 //   ⚽ Samuel Mbangula (hat-trick) / 86'
 //   🏆 Campeonato Italiano | 9ª Rodada
 import { buscarTodos, VIRADA } from './scraper.js';
+import { acharJogo } from './times.js';
 
 // O placar entre colchetes é de quem marcou. Formatos aceitos:
 //   r/soccer:  "Time A 1-[2] Time B - Jogador 62'"
@@ -63,38 +64,7 @@ export function lerTitulo(titulo) {
   };
 }
 
-// ---- Cruzar com a agenda do dia (nomes do futnatv em português, do Reddit em inglês) ----
-
-const APELIDOS = {
-  'inter milan': 'internazionale', inter: 'internazionale', psg: 'paris saint germain', 'paris sg': 'paris saint germain',
-  'man city': 'manchester city', 'man utd': 'manchester united', 'man united': 'manchester united',
-  spurs: 'tottenham', wolves: 'wolverhampton', 'nottm forest': 'nottingham forest',
-};
-// Siglas e palavras que não ajudam a identificar o time (FC, SSC, VfB, "1. FC", "Bayer 04"...)
-const VAZIAS = new Set(['fc', 'cf', 'ac', 'sc', 'afc', 'cd', 'ud', 'sd', 'ssc', 'vfl', 'vfb', 'tsg', 'sv', 'ssv', 'sg', 'bsc', 'us', 'as',
-  'calcio', 'de', 'da', 'do', 'del', 'la', 'the', 'club', 'f', 'w', 'women', 'feminino', '1', '04', '05']);
-
-const normalizar = (nome) => {
-  const n = nome.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
-  return (APELIDOS[n] || n).split(' ').filter((p) => p && !VAZIAS.has(p));
-};
-// Palavras "iguais": idênticas ou com o mesmo começo (munich/munique, milan/milao)
-const parecidas = (a, b) => a === b || (a.length >= 4 && b.length >= 4 && a.slice(0, 4) === b.slice(0, 4));
-function semelhanca(a, b) {
-  const x = normalizar(a), y = normalizar(b);
-  if (!x.length || !y.length) return 0;
-  const comuns = x.filter((p) => y.some((q) => parecidas(p, q))).length;
-  return comuns / Math.min(x.length, y.length);
-}
-
-export function acharJogo(lance, jogos) {
-  let melhor = null, nota = 0;
-  for (const j of jogos) {
-    const n = semelhanca(lance.mandante, j.mandante) + semelhanca(lance.visitante, j.visitante);
-    if (n > nota) [melhor, nota] = [j, n];
-  }
-  return nota >= 1 ? melhor : null; // pelo menos um time bate inteiro (ou os dois em parte)
-}
+export { acharJogo } from './times.js';
 
 // Jogos de futebol da agenda atual (até as 5h59 ainda vale a agenda de ontem). Guarda por 20 min.
 let cache = { em: 0, jogos: [] };
